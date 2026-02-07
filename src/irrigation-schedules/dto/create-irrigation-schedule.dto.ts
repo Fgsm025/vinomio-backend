@@ -10,8 +10,9 @@ export class CreateIrrigationScheduleDto {
   productionUnitId?: string;
 
   @IsOptional()
-  @IsString()
-  sectorId?: string;
+  @IsArray()
+  @IsString({ each: true })
+  sectorIds?: string[];
 
   @IsOptional()
   @IsString()

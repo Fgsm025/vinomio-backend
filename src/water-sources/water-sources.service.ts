@@ -14,11 +14,15 @@ export class WaterSourcesService {
   async findAll() {
     return this.prisma.waterSource.findMany({
       orderBy: { createdAt: 'desc' },
+      include: { productionUnit: true },
     });
   }
 
   async findOne(id: string) {
-    const waterSource = await this.prisma.waterSource.findUnique({ where: { id } });
+    const waterSource = await this.prisma.waterSource.findUnique({
+      where: { id },
+      include: { productionUnit: true },
+    });
     if (!waterSource) {
       throw new NotFoundException(`WaterSource with id "${id}" not found`);
     }

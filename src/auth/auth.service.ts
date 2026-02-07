@@ -1,9 +1,24 @@
 import { Injectable } from '@nestjs/common';
 import { CreateAuthDto } from './dto/create-auth.dto';
+import { LoginDto } from './dto/login.dto';
 import { UpdateAuthDto } from './dto/update-auth.dto';
 
 @Injectable()
 export class AuthService {
+  login(loginDto: LoginDto) {
+    const email = loginDto?.email ?? 'user@local';
+    const name = email.split('@')[0] || 'User';
+    return {
+      authToken: `token-${Date.now()}`,
+      user: {
+        id: 1,
+        name: name || 'User',
+        email,
+        avatar: null as string | null,
+      },
+    };
+  }
+
   create(createAuthDto: CreateAuthDto) {
     return 'This action adds a new auth';
   }

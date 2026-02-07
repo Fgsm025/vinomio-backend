@@ -147,9 +147,13 @@ model Exploitation {
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
-  productionUnits ProductionUnit[]
-  teamMembers     TeamMember[]
+  productionUnits    ProductionUnit[]
+  teamMembers        TeamMember[]
   traceabilityRecords TraceabilityRecord[]
+  products           Product[]
+  suppliers          Supplier[]
+  stockMovements     Stock[]
+  purchases          Purchase[]
 
   @@map("exploitations")
 }
@@ -207,11 +211,11 @@ model Sector {
   createdAt                 DateTime @default(now()) @map("created_at")
   updatedAt                 DateTime @updatedAt @map("updated_at")
 
-  productionUnit            ProductionUnit? @relation(fields: [productionUnitId], references: [id], onDelete: SetNull)
+  productionUnit            ProductionUnit?       @relation(fields: [productionUnitId], references: [id], onDelete: SetNull)
   facilities                Facility[]
   cropCycles                CropCycle[]
   grazingLocations          GrazingLocation[]
-  irrigationSchedules       IrrigationSchedule[]
+  sectorsOnIrrigationSchedule SectorOnIrrigationSchedule[]
   rainfallEvents            RainfallEvent[]
   traceabilityRecords       TraceabilityRecord[]
 
@@ -283,7 +287,6 @@ model IrrigationSchedule {
   id                      String   @id @default(uuid())
   scheduleName            String   @map("schedule_name")
   productionUnitId        String?  @map("production_unit_id")
-  sectorId                String?  @map("sector_id")
   fieldName               String?  @map("field_name")
   lotName                 String?  @map("lot_name")
   cropType                String?  @map("crop_type")
@@ -303,10 +306,21 @@ model IrrigationSchedule {
   createdAt               DateTime @default(now()) @map("created_at")
   updatedAt               DateTime @updatedAt @map("updated_at")
 
-  productionUnit          ProductionUnit? @relation(fields: [productionUnitId], references: [id], onDelete: SetNull)
-  sector                  Sector?         @relation(fields: [sectorId], references: [id], onDelete: SetNull)
+  productionUnit          ProductionUnit?       @relation(fields: [productionUnitId], references: [id], onDelete: SetNull)
+  sectorsOnSchedule       SectorOnIrrigationSchedule[]
 
   @@map("irrigation_schedules")
+}
+
+model SectorOnIrrigationSchedule {
+  irrigationScheduleId   String   @map("irrigation_schedule_id")
+  sectorId               String   @map("sector_id")
+
+  irrigationSchedule     IrrigationSchedule @relation(fields: [irrigationScheduleId], references: [id], onDelete: Cascade)
+  sector                 Sector             @relation(fields: [sectorId], references: [id], onDelete: Cascade)
+
+  @@id([irrigationScheduleId, sectorId])
+  @@map("sector_on_irrigation_schedule")
 }
 
 model RainfallEvent {
@@ -364,4 +378,69 @@ model TraceabilityRecord {
   sector              Sector?         @relation(fields: [sectorId], references: [id], onDelete: SetNull)
 
   @@map("traceability_records")
+}
+
+model Product {
+  id             String   @id @default(uuid())
+  name           String
+  category       String?
+  unit           String?  @default("unit")
+  description    String?
+  exploitationId String   @map("exploitation_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  exploitation   Exploitation @relation(fields: [exploitationId], references: [id], onDelete: Cascade)
+  stockMovements Stock[]
+
+  @@map("products")
+}
+
+model Supplier {
+  id             String   @id @default(uuid())
+  name           String
+  phone          String?
+  email          String?
+  status         String   @default("active")
+  exploitationId String   @map("exploitation_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  exploitation Exploitation @relation(fields: [exploitationId], references: [id], onDelete: Cascade)
+  purchases    Purchase[]
+
+  @@map("suppliers")
+}
+
+model Stock {
+  id             String   @id @default(uuid())
+  productId      String   @map("product_id")
+  quantity       Int
+  locationId     String?  @map("location_id")
+  date           DateTime @db.Date
+  type           String
+  exploitationId String   @map("exploitation_id")
+  purchaseId     String?  @unique @map("purchase_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  exploitation Exploitation @relation(fields: [exploitationId], references: [id], onDelete: Cascade)
+  product      Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  purchase     Purchase?    @relation(fields: [purchaseId], references: [id], onDelete: SetNull)
+
+  @@map("stock")
+}
+
+model Purchase {
+  id             String   @id @default(uuid())
+  supplierId     String   @map("supplier_id")
+  total          Decimal  @db.Decimal(12, 2)
+  date           DateTime @db.Date
+  exploitationId String   @map("exploitation_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  exploitation Exploitation @relation(fields: [exploitationId], references: [id], onDelete: Cascade)
+  supplier     Supplier     @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  stock        Stock?
+
+  @@map("purchases")
 }
