@@ -17,6 +17,8 @@ import { IrrigationSchedulesModule } from './irrigation-schedules/irrigation-sch
 import { RainfallEventsModule } from './rainfall-events/rainfall-events.module';
 import { TeamMembersModule } from './team-members/team-members.module';
 import { TraceabilityModule } from './traceability/traceability.module';
+import { PurchasesModule } from './purchases/purchases.module';
+import { InvitationsModule } from './invitations/invitations.module';
 
 @Module({
   imports: [
@@ -38,6 +40,8 @@ import { TraceabilityModule } from './traceability/traceability.module';
     RainfallEventsModule,
     TeamMembersModule,
     TraceabilityModule,
+    PurchasesModule,
+    InvitationsModule,
   ],
 })
 export class AppModule {}

@@ -15,7 +15,21 @@ function toPrismaDateTime(dateStr: string | undefined): string | undefined {
 export class MachineryService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(dto: CreateMachineryDto) {
+  async create(dto: CreateMachineryDto, exploitationId: string) {
+    if (dto.productionUnitId) {
+      const productionUnit = await this.prisma.productionUnit.findFirst({
+        where: {
+          id: dto.productionUnitId,
+          exploitationId,
+        },
+      });
+      if (!productionUnit) {
+        throw new NotFoundException(
+          `Production unit with id "${dto.productionUnitId}" not found in your exploitation`,
+        );
+      }
+    }
+
     const { model, acquisitionDate, ...rest } = dto;
     const created = await this.prisma.machinery.create({
       data: {
@@ -31,8 +45,13 @@ export class MachineryService {
     };
   }
 
-  async findAll() {
+  async findAll(exploitationId: string) {
     const machinery = await this.prisma.machinery.findMany({
+      where: {
+        productionUnit: {
+          exploitationId,
+        },
+      },
       orderBy: { createdAt: 'desc' },
     });
     return machinery.map(({ modelName, ...rest }) => ({
@@ -41,8 +60,15 @@ export class MachineryService {
     }));
   }
 
-  async findOne(id: string) {
-    const machinery = await this.prisma.machinery.findUnique({ where: { id } });
+  async findOne(id: string, exploitationId: string) {
+    const machinery = await this.prisma.machinery.findFirst({
+      where: {
+        id,
+        productionUnit: {
+          exploitationId,
+        },
+      },
+    });
     if (!machinery) {
       throw new NotFoundException(`Machinery with id "${id}" not found`);
     }
@@ -53,8 +79,23 @@ export class MachineryService {
     };
   }
 
-  async update(id: string, dto: UpdateMachineryDto) {
-    await this.findOne(id);
+  async update(id: string, dto: UpdateMachineryDto, exploitationId: string) {
+    await this.findOne(id, exploitationId);
+
+    if (dto.productionUnitId) {
+      const productionUnit = await this.prisma.productionUnit.findFirst({
+        where: {
+          id: dto.productionUnitId,
+          exploitationId,
+        },
+      });
+      if (!productionUnit) {
+        throw new NotFoundException(
+          `Production unit with id "${dto.productionUnitId}" not found in your exploitation`,
+        );
+      }
+    }
+
     const { model, acquisitionDate, ...rest } = dto;
     const updated = await this.prisma.machinery.update({
       where: { id },
@@ -73,8 +114,8 @@ export class MachineryService {
     };
   }
 
-  async remove(id: string) {
-    await this.findOne(id);
+  async remove(id: string, exploitationId: string) {
+    await this.findOne(id, exploitationId);
     return this.prisma.machinery.delete({ where: { id } });
   }
 }

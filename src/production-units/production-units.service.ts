@@ -11,8 +11,17 @@ export class ProductionUnitsService {
     return this.prisma.productionUnit.create({ data: dto });
   }
 
-  async findAll() {
+  async findAll(userId: string) {
     return this.prisma.productionUnit.findMany({
+      where: {
+        exploitation: {
+          users: {
+            some: {
+              userId,
+            },
+          },
+        },
+      },
       orderBy: { createdAt: 'desc' },
       include: {
         exploitation: true,
@@ -29,9 +38,18 @@ export class ProductionUnitsService {
     });
   }
 
-  async findOne(id: string) {
-    const productionUnit = await this.prisma.productionUnit.findUnique({
-      where: { id },
+  async findOne(id: string, userId: string) {
+    const productionUnit = await this.prisma.productionUnit.findFirst({
+      where: {
+        id,
+        exploitation: {
+          users: {
+            some: {
+              userId,
+            },
+          },
+        },
+      },
       include: {
         exploitation: true,
         sectors: true,
@@ -45,16 +63,16 @@ export class ProductionUnitsService {
     return productionUnit;
   }
 
-  async update(id: string, dto: UpdateProductionUnitDto) {
-    await this.findOne(id);
+  async update(id: string, dto: UpdateProductionUnitDto, userId: string) {
+    await this.findOne(id, userId);
     return this.prisma.productionUnit.update({
       where: { id },
       data: dto,
     });
   }
 
-  async remove(id: string) {
-    await this.findOne(id);
+  async remove(id: string, userId: string) {
+    await this.findOne(id, userId);
     return this.prisma.productionUnit.delete({ where: { id } });
   }
 }

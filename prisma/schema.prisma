@@ -6,6 +6,29 @@ datasource db {
   provider = "postgresql"
 }
 
+enum Role {
+  OWNER
+  ADMIN
+  FINANCE
+  AGRONOMIST
+  OPERATOR
+}
+
+model User {
+  id              String   @id @default(uuid())
+  email           String   @unique
+  password        String
+  name            String?
+  hasCompletedOnboarding Boolean @default(false) @map("has_completed_onboarding")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  exploitations UserExploitation[]
+  invitations   Invitation[]
+
+  @@map("users")
+}
+
 model Facility {
   id                  String   @id @default(uuid())
   name                String
@@ -147,6 +170,8 @@ model Exploitation {
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
+  users              UserExploitation[]
+  invitations        Invitation[]
   productionUnits    ProductionUnit[]
   teamMembers        TeamMember[]
   traceabilityRecords TraceabilityRecord[]
@@ -156,6 +181,40 @@ model Exploitation {
   purchases          Purchase[]
 
   @@map("exploitations")
+}
+
+model UserExploitation {
+  id             String   @id @default(uuid())
+  userId         String   @map("user_id")
+  exploitationId String   @map("exploitation_id")
+  role           Role
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exploitation Exploitation @relation(fields: [exploitationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, exploitationId])
+  @@map("user_exploitations")
+}
+
+model Invitation {
+  id             String   @id @default(uuid())
+  email          String
+  exploitationId String   @map("exploitation_id")
+  role           Role
+  invitedById    String   @map("invited_by_id")
+  token          String   @unique
+  status         String   @default("pending")
+  expiresAt      DateTime @map("expires_at")
+  acceptedAt     DateTime? @map("accepted_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  invitedBy    User         @relation(fields: [invitedById], references: [id], onDelete: Cascade)
+  exploitation Exploitation @relation(fields: [exploitationId], references: [id], onDelete: Cascade)
+
+  @@map("invitations")
 }
 
 model ProductionUnit {

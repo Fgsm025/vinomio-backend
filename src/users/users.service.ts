@@ -1,0 +1,71 @@
+import { Injectable, ConflictException } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import * as bcrypt from 'bcrypt';
+
+@Injectable()
+export class UsersService {
+  constructor(private readonly prisma: PrismaService) {}
+
+  async findByEmail(email: string) {
+    return this.prisma.user.findUnique({
+      where: { email },
+      include: {
+        exploitations: {
+          include: {
+            exploitation: true,
+          },
+        },
+      },
+    });
+  }
+
+  async create(email: string, password: string, name?: string) {
+    const existingUser = await this.findByEmail(email);
+    if (existingUser) {
+      throw new ConflictException('User with this email already exists');
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    return this.prisma.user.create({
+      data: {
+        email,
+        password: hashedPassword,
+        name,
+        hasCompletedOnboarding: false,
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        hasCompletedOnboarding: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+  }
+
+  async getUserExploitations(userId: string) {
+    return this.prisma.userExploitation.findMany({
+      where: { userId },
+      include: {
+        exploitation: true,
+      },
+    });
+  }
+
+  async completeOnboarding(userId: string) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        hasCompletedOnboarding: true,
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        hasCompletedOnboarding: true,
+      },
+    });
+  }
+}

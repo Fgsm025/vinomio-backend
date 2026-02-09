@@ -1,41 +1,116 @@
 import { Injectable } from '@nestjs/common';
-import { CreateAuthDto } from './dto/create-auth.dto';
-import { LoginDto } from './dto/login.dto';
-import { UpdateAuthDto } from './dto/update-auth.dto';
+import { JwtService } from '@nestjs/jwt';
+import { UsersService } from '../users/users.service';
+import { RegisterDto } from './dto/register.dto';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class AuthService {
-  login(loginDto: LoginDto) {
-    const email = loginDto?.email ?? 'user@local';
-    const name = email.split('@')[0] || 'User';
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly jwtService: JwtService,
+  ) {}
+
+  async register(registerDto: RegisterDto) {
+    const user = await this.usersService.create(
+      registerDto.email,
+      registerDto.password,
+      registerDto.name,
+    );
+
+    const payload = {
+      email: user.email,
+      sub: user.id,
+      needsOnboarding: true,
+    };
+    const access_token = this.jwtService.sign(payload);
+
     return {
-      authToken: `token-${Date.now()}`,
+      access_token,
       user: {
-        id: 1,
-        name: name || 'User',
-        email,
-        avatar: null as string | null,
+        id: user.id,
+        email: user.email,
+        name: user.name || null,
+        hasCompletedOnboarding: false,
       },
+      needsOnboarding: true,
     };
   }
 
-  create(createAuthDto: CreateAuthDto) {
-    return 'This action adds a new auth';
+  async validateUser(email: string, password: string): Promise<any> {
+    const user = await this.usersService.findByEmail(email);
+    if (user && (await bcrypt.compare(password, user.password))) {
+      const { password: _, ...result } = user;
+      return result;
+    }
+    return null;
   }
 
-  findAll() {
-    return `This action returns all auth`;
+  async completeOnboarding(userId: string) {
+    return this.usersService.completeOnboarding(userId);
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} auth`;
-  }
+  async login(user: any, exploitationId?: string) {
+    if (!user.hasCompletedOnboarding && (!user.exploitations || user.exploitations.length === 0)) {
+      const payload = {
+        email: user.email,
+        sub: user.id,
+        needsOnboarding: true,
+      };
+      const access_token = this.jwtService.sign(payload);
 
-  update(id: number, updateAuthDto: UpdateAuthDto) {
-    return `This action updates a #${id} auth`;
-  }
+      return {
+        access_token,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name || null,
+          hasCompletedOnboarding: false,
+        },
+        needsOnboarding: true,
+      };
+    }
 
-  remove(id: number) {
-    return `This action removes a #${id} auth`;
+    const userExploitations = user.exploitations || [];
+    
+    if (userExploitations.length === 0) {
+      throw new Error('User has no exploitations assigned');
+    }
+
+    let selectedExploitation = userExploitations[0];
+    if (exploitationId) {
+      const found = userExploitations.find(
+        (ue: any) => ue.exploitationId === exploitationId,
+      );
+      if (found) {
+        selectedExploitation = found;
+      }
+    }
+
+    const payload = {
+      email: user.email,
+      sub: user.id,
+      exploitationId: selectedExploitation.exploitationId,
+      role: selectedExploitation.role,
+    };
+    const access_token = this.jwtService.sign(payload);
+
+    return {
+      access_token,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name || null,
+        exploitationId: selectedExploitation.exploitationId,
+        role: selectedExploitation.role,
+        hasCompletedOnboarding: user.hasCompletedOnboarding,
+        exploitations: userExploitations.map((ue: any) => ({
+          id: ue.exploitationId,
+          name: ue.exploitation.name,
+          role: ue.role,
+        })),
+      },
+      needsOnboarding: false,
+    };
   }
 }

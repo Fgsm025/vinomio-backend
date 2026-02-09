@@ -8,10 +8,14 @@ import {
   Param,
   Query,
   ParseUUIDPipe,
+  UseGuards,
 } from '@nestjs/common';
 import { ProductionUnitsService } from './production-units.service';
 import { CreateProductionUnitDto } from './dto/create-production-unit.dto';
 import { UpdateProductionUnitDto } from './dto/update-production-unit.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import type { CurrentUserPayload } from '../auth/decorators/current-user.decorator';
 
 @Controller('production-units')
 export class ProductionUnitsController {
@@ -20,33 +24,61 @@ export class ProductionUnitsController {
   ) {}
 
   @Post()
-  create(@Body() dto: CreateProductionUnitDto) {
-    return this.productionUnitsService.create(dto);
+  @UseGuards(JwtAuthGuard)
+  create(
+    @Body() dto: CreateProductionUnitDto,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    if (!user.exploitationId && !user.needsOnboarding) {
+      throw new Error('User must have an exploitation assigned or need onboarding');
+    }
+    return this.productionUnitsService.create({
+      ...dto,
+      exploitationId: dto.exploitationId || user.exploitationId,
+    });
   }
 
   @Get()
-  findAll(@Query('exploitationId') exploitationId?: string) {
-    if (exploitationId) {
-      return this.productionUnitsService.findByExploitation(exploitationId);
+  @UseGuards(JwtAuthGuard)
+  findAll(
+    @Query('exploitationId') exploitationId: string | undefined,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    if (user.needsOnboarding) {
+      return [];
     }
-    return this.productionUnitsService.findAll();
+    const targetExploitationId = exploitationId || user.exploitationId;
+    if (targetExploitationId) {
+      return this.productionUnitsService.findByExploitation(targetExploitationId);
+    }
+    return this.productionUnitsService.findAll(user.userId);
   }
 
   @Get(':id')
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.productionUnitsService.findOne(id);
+  @UseGuards(JwtAuthGuard)
+  findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    return this.productionUnitsService.findOne(id, user.userId);
   }
 
   @Put(':id')
+  @UseGuards(JwtAuthGuard)
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateProductionUnitDto,
+    @CurrentUser() user: CurrentUserPayload,
   ) {
-    return this.productionUnitsService.update(id, dto);
+    return this.productionUnitsService.update(id, dto, user.userId);
   }
 
   @Delete(':id')
-  remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.productionUnitsService.remove(id);
+  @UseGuards(JwtAuthGuard)
+  remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    return this.productionUnitsService.remove(id, user.userId);
   }
 }
