@@ -31,6 +31,7 @@ export class AuthService {
         id: user.id,
         email: user.email,
         name: user.name || null,
+        avatar: user.avatar || null,
         hasCompletedOnboarding: false,
       },
       needsOnboarding: true,
@@ -50,6 +51,18 @@ export class AuthService {
     return this.usersService.completeOnboarding(userId);
   }
 
+  async getProfile(userId: string) {
+    const user = await this.usersService.findById(userId);
+    if (!user) return null;
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name || null,
+      avatar: user.avatar || null,
+      hasCompletedOnboarding: user.hasCompletedOnboarding,
+    };
+  }
+
   async login(user: any, exploitationId?: string) {
     if (!user.hasCompletedOnboarding && (!user.exploitations || user.exploitations.length === 0)) {
       const payload = {
@@ -65,6 +78,7 @@ export class AuthService {
           id: user.id,
           email: user.email,
           name: user.name || null,
+          avatar: user.avatar || null,
           hasCompletedOnboarding: false,
         },
         needsOnboarding: true,
@@ -101,6 +115,7 @@ export class AuthService {
         id: user.id,
         email: user.email,
         name: user.name || null,
+        avatar: user.avatar || null,
         exploitationId: selectedExploitation.exploitationId,
         role: selectedExploitation.role,
         hasCompletedOnboarding: user.hasCompletedOnboarding,

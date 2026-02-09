@@ -19,6 +19,21 @@ export class UsersService {
     });
   }
 
+  async findById(userId: string) {
+    return this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        avatar: true,
+        hasCompletedOnboarding: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+  }
+
   async create(email: string, password: string, name?: string) {
     const existingUser = await this.findByEmail(email);
     if (existingUser) {
@@ -38,6 +53,7 @@ export class UsersService {
         id: true,
         email: true,
         name: true,
+        avatar: true,
         hasCompletedOnboarding: true,
         createdAt: true,
         updatedAt: true,
@@ -64,6 +80,7 @@ export class UsersService {
         id: true,
         email: true,
         name: true,
+        avatar: true,
         hasCompletedOnboarding: true,
       },
     });
