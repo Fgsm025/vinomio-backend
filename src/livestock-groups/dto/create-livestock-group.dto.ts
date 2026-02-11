@@ -12,5 +12,5 @@ export class CreateLivestockGroupDto {
 
   @IsOptional()
   @IsString()
-  productionUnitId?: string;
+  fieldId?: string;
 }

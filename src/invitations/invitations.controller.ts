@@ -27,12 +27,12 @@ export class InvitationsController {
     @Body() createInvitationDto: CreateInvitationDto,
     @CurrentUser() user: CurrentUserPayload,
   ) {
-    if (!user.exploitationId) {
-      throw new Error('User must have an exploitation assigned');
+    if (!user.farmId) {
+      throw new Error('User must have a farm assigned');
     }
     return this.invitationsService.createInvitation(
       createInvitationDto,
-      user.exploitationId,
+      user.farmId,
       user.userId,
     );
   }
@@ -46,10 +46,10 @@ export class InvitationsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.OWNER, Role.ADMIN)
   findAll(@CurrentUser() user: CurrentUserPayload) {
-    if (!user.exploitationId) {
-      throw new Error('User must have an exploitation assigned');
+    if (!user.farmId) {
+      throw new Error('User must have a farm assigned');
     }
-    return this.invitationsService.getInvitations(user.exploitationId);
+    return this.invitationsService.getInvitations(user.farmId);
   }
 
   @Delete(':id')
@@ -59,9 +59,9 @@ export class InvitationsController {
     @Param('id') id: string,
     @CurrentUser() user: CurrentUserPayload,
   ) {
-    if (!user.exploitationId) {
-      throw new Error('User must have an exploitation assigned');
+    if (!user.farmId) {
+      throw new Error('User must have a farm assigned');
     }
-    return this.invitationsService.cancelInvitation(id, user.exploitationId);
+    return this.invitationsService.cancelInvitation(id, user.farmId);
   }
 }

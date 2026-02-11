@@ -14,14 +14,14 @@ export class TeamMembersService {
   async findAll() {
     return this.prisma.teamMember.findMany({
       orderBy: { createdAt: 'desc' },
-      include: { exploitation: true },
+      include: { farm: true },
     });
   }
 
   async findOne(id: string) {
     const member = await this.prisma.teamMember.findUnique({
       where: { id },
-      include: { exploitation: true },
+      include: { farm: true },
     });
     if (!member) {
       throw new NotFoundException(`TeamMember with id "${id}" not found`);

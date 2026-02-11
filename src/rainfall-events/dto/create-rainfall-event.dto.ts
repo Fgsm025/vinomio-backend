@@ -3,11 +3,11 @@ import { IsString, IsOptional, IsNumber, IsNotEmpty, IsDateString } from 'class-
 export class CreateRainfallEventDto {
   @IsString()
   @IsNotEmpty()
-  productionUnitId: string;
+  fieldId: string;
 
   @IsOptional()
   @IsString()
-  sectorId?: string;
+  plotId?: string;
 
   @IsDateString()
   @IsNotEmpty()

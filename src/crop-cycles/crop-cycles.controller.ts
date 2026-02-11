@@ -13,11 +13,14 @@ export class CropCyclesController {
   }
 
   @Get()
-  findAll(@Query('sectorId') sectorId?: string) {
-    if (sectorId) {
-      return this.cropCyclesService.findBySector(sectorId);
+  findAll(
+    @Query('plotId') plotId?: string,
+    @Query('season') season?: string,
+  ) {
+    if (plotId && !season) {
+      return this.cropCyclesService.findByPlot(plotId);
     }
-    return this.cropCyclesService.findAll();
+    return this.cropCyclesService.findAll({ plotId, season });
   }
 
   @Get(':id')

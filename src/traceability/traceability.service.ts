@@ -14,14 +14,14 @@ export class TraceabilityService {
   async findAll() {
     return this.prisma.traceabilityRecord.findMany({
       orderBy: { createdAt: 'desc' },
-      include: { exploitation: true, productionUnit: true, sector: true },
+      include: { farm: true, field: true, plot: true },
     });
   }
 
   async findOne(id: string) {
     const record = await this.prisma.traceabilityRecord.findUnique({
       where: { id },
-      include: { exploitation: true, productionUnit: true, sector: true },
+      include: { farm: true, field: true, plot: true },
     });
     if (!record) {
       throw new NotFoundException(`TraceabilityRecord with id "${id}" not found`);

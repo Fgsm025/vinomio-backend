@@ -14,14 +14,14 @@ export class RainfallEventsService {
   async findAll() {
     return this.prisma.rainfallEvent.findMany({
       orderBy: { createdAt: 'desc' },
-      include: { productionUnit: true, sector: true },
+      include: { field: true, plot: true },
     });
   }
 
   async findOne(id: string) {
     const event = await this.prisma.rainfallEvent.findUnique({
       where: { id },
-      include: { productionUnit: true, sector: true },
+      include: { field: true, plot: true },
     });
     if (!event) {
       throw new NotFoundException(`RainfallEvent with id "${id}" not found`);

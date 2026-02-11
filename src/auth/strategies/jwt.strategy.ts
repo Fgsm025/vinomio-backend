@@ -5,7 +5,7 @@ import { Injectable } from '@nestjs/common';
 export interface JwtPayload {
   sub: string;
   email: string;
-  exploitationId?: string;
+  farmId?: string;
   role?: string;
   needsOnboarding?: boolean;
 }
@@ -29,14 +29,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       };
     }
 
-    if (!payload.exploitationId || !payload.role) {
+    if (!payload.farmId || !payload.role) {
       return null;
     }
 
     return {
       userId: payload.sub,
       email: payload.email,
-      exploitationId: payload.exploitationId,
+      farmId: payload.farmId,
       role: payload.role,
     };
   }

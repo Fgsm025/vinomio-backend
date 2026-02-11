@@ -11,15 +11,15 @@ export class CreateTraceabilityRecordDto {
 
   @IsString()
   @IsNotEmpty()
-  exploitationId: string;
+  farmId: string;
 
   @IsOptional()
   @IsString()
-  productionUnitId?: string;
+  fieldId?: string;
 
   @IsOptional()
   @IsString()
-  sectorId?: string;
+  plotId?: string;
 
   @IsDateString()
   @IsNotEmpty()

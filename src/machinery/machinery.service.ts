@@ -15,17 +15,17 @@ function toPrismaDateTime(dateStr: string | undefined): string | undefined {
 export class MachineryService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(dto: CreateMachineryDto, exploitationId: string) {
-    if (dto.productionUnitId) {
-      const productionUnit = await this.prisma.productionUnit.findFirst({
+  async create(dto: CreateMachineryDto, farmId: string) {
+    if (dto.fieldId) {
+      const field = await this.prisma.field.findFirst({
         where: {
-          id: dto.productionUnitId,
-          exploitationId,
+          id: dto.fieldId,
+          farmId,
         },
       });
-      if (!productionUnit) {
+      if (!field) {
         throw new NotFoundException(
-          `Production unit with id "${dto.productionUnitId}" not found in your exploitation`,
+          `Field with id "${dto.fieldId}" not found in your farm`,
         );
       }
     }
@@ -36,6 +36,7 @@ export class MachineryService {
         ...rest,
         modelName: model,
         acquisitionDate: toPrismaDateTime(acquisitionDate),
+        farmId,
       },
     });
     const { modelName, ...restCreated } = created;
@@ -45,12 +46,13 @@ export class MachineryService {
     };
   }
 
-  async findAll(exploitationId: string) {
+  async findAll(farmId: string) {
     const machinery = await this.prisma.machinery.findMany({
       where: {
-        productionUnit: {
-          exploitationId,
-        },
+        OR: [
+          { farmId },
+          { field: { farmId } },
+        ],
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -60,13 +62,14 @@ export class MachineryService {
     }));
   }
 
-  async findOne(id: string, exploitationId: string) {
+  async findOne(id: string, farmId: string) {
     const machinery = await this.prisma.machinery.findFirst({
       where: {
         id,
-        productionUnit: {
-          exploitationId,
-        },
+        OR: [
+          { farmId },
+          { field: { farmId } },
+        ],
       },
     });
     if (!machinery) {
@@ -79,19 +82,19 @@ export class MachineryService {
     };
   }
 
-  async update(id: string, dto: UpdateMachineryDto, exploitationId: string) {
-    await this.findOne(id, exploitationId);
+  async update(id: string, dto: UpdateMachineryDto, farmId: string) {
+    await this.findOne(id, farmId);
 
-    if (dto.productionUnitId) {
-      const productionUnit = await this.prisma.productionUnit.findFirst({
+    if (dto.fieldId) {
+      const field = await this.prisma.field.findFirst({
         where: {
-          id: dto.productionUnitId,
-          exploitationId,
+          id: dto.fieldId,
+          farmId,
         },
       });
-      if (!productionUnit) {
+      if (!field) {
         throw new NotFoundException(
-          `Production unit with id "${dto.productionUnitId}" not found in your exploitation`,
+          `Field with id "${dto.fieldId}" not found in your farm`,
         );
       }
     }
@@ -114,8 +117,8 @@ export class MachineryService {
     };
   }
 
-  async remove(id: string, exploitationId: string) {
-    await this.findOne(id, exploitationId);
+  async remove(id: string, farmId: string) {
+    await this.findOne(id, farmId);
     return this.prisma.machinery.delete({ where: { id } });
   }
 }

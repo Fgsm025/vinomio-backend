@@ -11,37 +11,37 @@ export class InvitationsService {
 
   async createInvitation(
     createInvitationDto: CreateInvitationDto,
-    exploitationId: string,
+    farmId: string,
     invitedById: string,
   ) {
-    const exploitation = await this.prisma.exploitation.findUnique({
-      where: { id: exploitationId },
+    const farm = await this.prisma.farm.findUnique({
+      where: { id: farmId },
     });
 
-    if (!exploitation) {
-      throw new NotFoundException('Exploitation not found');
+    if (!farm) {
+      throw new NotFoundException('Farm not found');
     }
 
     const existingUser = await this.prisma.user.findUnique({
       where: { email: createInvitationDto.email },
       include: {
-        exploitations: {
-          where: { exploitationId },
+        farms: {
+          where: { farmId },
         },
       },
     });
 
     if (existingUser) {
-      const alreadyMember = existingUser.exploitations.length > 0;
+      const alreadyMember = existingUser.farms.length > 0;
       if (alreadyMember) {
-        throw new BadRequestException('User is already a member of this exploitation');
+        throw new BadRequestException('User is already a member of this farm');
       }
     }
 
     const existingInvitation = await this.prisma.invitation.findFirst({
       where: {
         email: createInvitationDto.email,
-        exploitationId,
+        farmId,
         status: 'pending',
         expiresAt: {
           gt: new Date(),
@@ -60,7 +60,7 @@ export class InvitationsService {
     return this.prisma.invitation.create({
       data: {
         email: createInvitationDto.email,
-        exploitationId,
+        farmId,
         role: createInvitationDto.role,
         invitedById,
         token,
@@ -73,7 +73,7 @@ export class InvitationsService {
     const invitation = await this.prisma.invitation.findUnique({
       where: { token: acceptInvitationDto.token },
       include: {
-        exploitation: true,
+        farm: true,
       },
     });
 
@@ -105,10 +105,10 @@ export class InvitationsService {
       });
     }
 
-    await this.prisma.userExploitation.create({
+    await this.prisma.userFarm.create({
       data: {
         userId: user.id,
-        exploitationId: invitation.exploitationId,
+        farmId: invitation.farmId,
         role: invitation.role,
       },
     });
@@ -128,17 +128,17 @@ export class InvitationsService {
         name: user.name,
         hasCompletedOnboarding: user.hasCompletedOnboarding,
       },
-      exploitation: {
-        id: invitation.exploitation.id,
-        name: invitation.exploitation.name,
+      farm: {
+        id: invitation.farm.id,
+        name: invitation.farm.name,
       },
       role: invitation.role,
     };
   }
 
-  async getInvitations(exploitationId: string) {
+  async getInvitations(farmId: string) {
     return this.prisma.invitation.findMany({
-      where: { exploitationId },
+      where: { farmId },
       include: {
         invitedBy: {
           select: {
@@ -152,11 +152,11 @@ export class InvitationsService {
     });
   }
 
-  async cancelInvitation(invitationId: string, exploitationId: string) {
+  async cancelInvitation(invitationId: string, farmId: string) {
     const invitation = await this.prisma.invitation.findFirst({
       where: {
         id: invitationId,
-        exploitationId,
+        farmId,
         status: 'pending',
       },
     });

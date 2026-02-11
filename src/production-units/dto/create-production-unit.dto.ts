@@ -4,7 +4,6 @@ import {
   IsNumber,
   IsNotEmpty,
   IsBoolean,
-  IsArray,
   IsObject,
 } from 'class-validator';
 
@@ -15,7 +14,7 @@ export class CreateProductionUnitDto {
 
   @IsOptional()
   @IsString()
-  exploitationId?: string;
+  farmId?: string;
 
   @IsString()
   @IsNotEmpty()
@@ -32,15 +31,6 @@ export class CreateProductionUnitDto {
   @IsOptional()
   @IsNumber()
   yearEstablished?: number;
-
-  @IsOptional()
-  @IsNumber()
-  totalArea?: number;
-
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  associatedSectors?: string[];
 
   @IsOptional()
   @IsString()
@@ -81,4 +71,12 @@ export class CreateProductionUnitDto {
   @IsOptional()
   @IsString()
   color?: string;
+
+  @IsOptional()
+  @IsObject()
+  geometry?: Record<string, unknown>;
+
+  @IsOptional()
+  @IsNumber()
+  surface?: number;
 }

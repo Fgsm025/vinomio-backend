@@ -28,26 +28,26 @@ export class PurchasesController {
     @Body() createPurchaseDto: CreatePurchaseDto,
     @CurrentUser() user: CurrentUserPayload,
   ) {
-    if (!user.exploitationId) {
-      throw new Error('User must have an exploitation assigned');
+    if (!user.farmId) {
+      throw new Error('User must have a farm assigned');
     }
-    return this.purchasesService.create(createPurchaseDto, user.exploitationId);
+    return this.purchasesService.create(createPurchaseDto, user.farmId);
   }
 
   @Get()
   findAll(@CurrentUser() user: CurrentUserPayload) {
-    if (!user.exploitationId) {
-      throw new Error('User must have an exploitation assigned');
+    if (!user.farmId) {
+      throw new Error('User must have a farm assigned');
     }
-    return this.purchasesService.findAll(user.exploitationId);
+    return this.purchasesService.findAll(user.farmId);
   }
 
   @Get(':id')
   findOne(@Param('id') id: string, @CurrentUser() user: CurrentUserPayload) {
-    if (!user.exploitationId) {
-      throw new Error('User must have an exploitation assigned');
+    if (!user.farmId) {
+      throw new Error('User must have a farm assigned');
     }
-    return this.purchasesService.findOne(id, user.exploitationId);
+    return this.purchasesService.findOne(id, user.farmId);
   }
 
   @Patch(':id')
@@ -56,17 +56,17 @@ export class PurchasesController {
     @Body() updatePurchaseDto: UpdatePurchaseDto,
     @CurrentUser() user: CurrentUserPayload,
   ) {
-    if (!user.exploitationId) {
-      throw new Error('User must have an exploitation assigned');
+    if (!user.farmId) {
+      throw new Error('User must have a farm assigned');
     }
-    return this.purchasesService.update(id, updatePurchaseDto, user.exploitationId);
+    return this.purchasesService.update(id, updatePurchaseDto, user.farmId);
   }
 
   @Delete(':id')
   remove(@Param('id') id: string, @CurrentUser() user: CurrentUserPayload) {
-    if (!user.exploitationId) {
-      throw new Error('User must have an exploitation assigned');
+    if (!user.farmId) {
+      throw new Error('User must have a farm assigned');
     }
-    return this.purchasesService.remove(id, user.exploitationId);
+    return this.purchasesService.remove(id, user.farmId);
   }
 }

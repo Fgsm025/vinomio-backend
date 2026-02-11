@@ -5,6 +5,7 @@ import {
   IsNotEmpty,
   IsBoolean,
   IsArray,
+  IsIn,
 } from 'class-validator';
 
 export class CreateCropDto {
@@ -22,11 +23,8 @@ export class CreateCropDto {
 
   @IsOptional()
   @IsString()
+  @IsIn(['irrigation', 'rainfed'])
   exploitationSystem?: string;
-
-  @IsOptional()
-  @IsString()
-  agriculturalActivity?: string;
 
   @IsOptional()
   @IsString()
@@ -39,6 +37,11 @@ export class CreateCropDto {
   @IsOptional()
   @IsString()
   cropDestination?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  cropDestinations?: string[];
 
   @IsOptional()
   @IsString()
@@ -66,6 +69,14 @@ export class CreateCropDto {
 
   @IsOptional()
   @IsNumber()
+  betweenRows?: number;
+
+  @IsOptional()
+  @IsNumber()
+  onRow?: number;
+
+  @IsOptional()
+  @IsNumber()
   plantDensity?: number;
 
   @IsOptional()
@@ -78,5 +89,64 @@ export class CreateCropDto {
   qualityRegimes?: string[];
 
   @IsOptional()
-  image?: any;
+  image?: Record<string, unknown>;
+
+  @IsOptional()
+  @IsString()
+  scientificName?: string;
+
+  @IsOptional()
+  @IsNumber()
+  lifespan?: number;
+
+  @IsOptional()
+  @IsString()
+  @IsIn(['single', 'multiple', 'continuous'])
+  harvestType?: string;
+
+  @IsOptional()
+  @IsNumber()
+  estimatedYieldPerHa?: number;
+
+  @IsOptional()
+  @IsString()
+  @IsIn(['kg', 'ton', 'units'])
+  yieldUnit?: string;
+
+  @IsOptional()
+  @IsNumber()
+  minTemperature?: number;
+
+  @IsOptional()
+  @IsNumber()
+  maxTemperature?: number;
+
+  @IsOptional()
+  @IsString()
+  @IsIn(['low', 'medium', 'high', 'very-high'])
+  waterRequirements?: string;
+
+  @IsOptional()
+  @IsNumber()
+  plantingDays?: number;
+
+  @IsOptional()
+  @IsNumber()
+  growingDays?: number;
+
+  @IsOptional()
+  @IsNumber()
+  veraisonDays?: number;
+
+  @IsOptional()
+  @IsNumber()
+  maturationDays?: number;
+
+  @IsOptional()
+  @IsNumber()
+  harvestDays?: number;
+
+  @IsOptional()
+  @IsNumber()
+  postHarvestDays?: number;
 }

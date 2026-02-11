@@ -3,14 +3,14 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateIrrigationScheduleDto } from './dto/create-irrigation-schedule.dto';
 import { UpdateIrrigationScheduleDto } from './dto/update-irrigation-schedule.dto';
 
-function toScheduleWithSectorIds(schedule: {
-  sectorsOnSchedule: { sectorId: string }[];
+function toScheduleWithPlotIds(schedule: {
+  plotsOnSchedule: { plotId: string }[];
   [k: string]: unknown;
 }) {
-  const { sectorsOnSchedule, ...rest } = schedule;
+  const { plotsOnSchedule, ...rest } = schedule;
   return {
     ...rest,
-    sectorIds: sectorsOnSchedule?.map((s) => s.sectorId) ?? [],
+    plotIds: plotsOnSchedule?.map((p) => p.plotId) ?? [],
   };
 }
 
@@ -19,36 +19,36 @@ export class IrrigationSchedulesService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(dto: CreateIrrigationScheduleDto) {
-    const { sectorIds, ...rest } = dto;
+    const { plotIds, ...rest } = dto;
     const created = await this.prisma.irrigationSchedule.create({
       data: {
         ...rest,
-        sectorsOnSchedule: {
-          create: (sectorIds ?? []).map((sectorId) => ({ sectorId })),
+        plotsOnSchedule: {
+          create: (plotIds ?? []).map((plotId) => ({ plotId })),
         },
       },
-      include: { sectorsOnSchedule: true },
+      include: { plotsOnSchedule: true },
     });
-    return toScheduleWithSectorIds(created);
+    return toScheduleWithPlotIds(created);
   }
 
   async findAll() {
     const list = await this.prisma.irrigationSchedule.findMany({
       orderBy: { createdAt: 'desc' },
-      include: { productionUnit: true, sectorsOnSchedule: true },
+      include: { field: true, plotsOnSchedule: true },
     });
-    return list.map(toScheduleWithSectorIds);
+    return list.map(toScheduleWithPlotIds);
   }
 
   async findOne(id: string) {
     const schedule = await this.prisma.irrigationSchedule.findUnique({
       where: { id },
-      include: { productionUnit: true, sectorsOnSchedule: true },
+      include: { field: true, plotsOnSchedule: true },
     });
     if (!schedule) {
       throw new NotFoundException(`IrrigationSchedule with id "${id}" not found`);
     }
-    return toScheduleWithSectorIds(schedule);
+    return toScheduleWithPlotIds(schedule);
   }
 
   async update(id: string, dto: UpdateIrrigationScheduleDto) {
@@ -58,22 +58,22 @@ export class IrrigationSchedulesService {
     if (!existing) {
       throw new NotFoundException(`IrrigationSchedule with id "${id}" not found`);
     }
-    const { sectorIds, ...rest } = dto;
+    const { plotIds, ...rest } = dto;
     const updateData = { ...rest } as Parameters<
       typeof this.prisma.irrigationSchedule.update
     >[0]['data'];
-    if (sectorIds !== undefined) {
-      (updateData as Record<string, unknown>).sectorsOnSchedule = {
+    if (plotIds !== undefined) {
+      (updateData as Record<string, unknown>).plotsOnSchedule = {
         deleteMany: {},
-        create: sectorIds.map((sectorId) => ({ sectorId })),
+        create: plotIds.map((plotId) => ({ plotId })),
       };
     }
     const updated = await this.prisma.irrigationSchedule.update({
       where: { id },
       data: updateData,
-      include: { sectorsOnSchedule: true },
+      include: { plotsOnSchedule: true },
     });
-    return toScheduleWithSectorIds(updated);
+    return toScheduleWithPlotIds(updated);
   }
 
   async remove(id: string) {

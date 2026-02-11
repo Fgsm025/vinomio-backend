@@ -63,13 +63,30 @@ export class AuthService {
     };
   }
 
-  async login(user: any, exploitationId?: string) {
-    if (!user.hasCompletedOnboarding && (!user.exploitations || user.exploitations.length === 0)) {
-      const payload = {
+  async login(user: any, farmId?: string) {
+    const userFarms = user.farms || [];
+    
+    if (!user.hasCompletedOnboarding) {
+      const payload: any = {
         email: user.email,
         sub: user.id,
         needsOnboarding: true,
       };
+      
+      if (userFarms.length > 0) {
+        let selectedFarm = userFarms[0];
+        if (farmId) {
+          const found = userFarms.find(
+            (uf: any) => uf.farmId === farmId,
+          );
+          if (found) {
+            selectedFarm = found;
+          }
+        }
+        payload.farmId = selectedFarm.farmId;
+        payload.role = selectedFarm.role;
+      }
+      
       const access_token = this.jwtService.sign(payload);
 
       return {
@@ -79,33 +96,38 @@ export class AuthService {
           email: user.email,
           name: user.name || null,
           avatar: user.avatar || null,
+          farmId: userFarms.length > 0 ? (farmId || userFarms[0].farmId) : undefined,
+          role: userFarms.length > 0 ? (userFarms.find((uf: any) => uf.farmId === farmId)?.role || userFarms[0].role) : undefined,
           hasCompletedOnboarding: false,
+          farms: userFarms.map((uf: any) => ({
+            id: uf.farmId,
+            name: uf.farm.name,
+            role: uf.role,
+          })),
         },
         needsOnboarding: true,
       };
     }
 
-    const userExploitations = user.exploitations || [];
-    
-    if (userExploitations.length === 0) {
-      throw new Error('User has no exploitations assigned');
+    if (userFarms.length === 0) {
+      throw new Error('User has no farms assigned');
     }
 
-    let selectedExploitation = userExploitations[0];
-    if (exploitationId) {
-      const found = userExploitations.find(
-        (ue: any) => ue.exploitationId === exploitationId,
+    let selectedFarm = userFarms[0];
+    if (farmId) {
+      const found = userFarms.find(
+        (uf: any) => uf.farmId === farmId,
       );
       if (found) {
-        selectedExploitation = found;
+        selectedFarm = found;
       }
     }
 
     const payload = {
       email: user.email,
       sub: user.id,
-      exploitationId: selectedExploitation.exploitationId,
-      role: selectedExploitation.role,
+      farmId: selectedFarm.farmId,
+      role: selectedFarm.role,
     };
     const access_token = this.jwtService.sign(payload);
 
@@ -116,13 +138,13 @@ export class AuthService {
         email: user.email,
         name: user.name || null,
         avatar: user.avatar || null,
-        exploitationId: selectedExploitation.exploitationId,
-        role: selectedExploitation.role,
+        farmId: selectedFarm.farmId,
+        role: selectedFarm.role,
         hasCompletedOnboarding: user.hasCompletedOnboarding,
-        exploitations: userExploitations.map((ue: any) => ({
-          id: ue.exploitationId,
-          name: ue.exploitation.name,
-          role: ue.role,
+        farms: userFarms.map((uf: any) => ({
+          id: uf.farmId,
+          name: uf.farm.name,
+          role: uf.role,
         })),
       },
       needsOnboarding: false,

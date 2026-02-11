@@ -19,7 +19,7 @@ export class AuthController {
   @UseGuards(LocalAuthGuard)
   @Post('login')
   login(@Request() req, @Body() loginDto: LoginDto) {
-    return this.authService.login(req.user, loginDto.exploitationId);
+    return this.authService.login(req.user, loginDto.farmId);
   }
 
   @UseGuards(JwtAuthGuard)

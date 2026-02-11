@@ -74,5 +74,5 @@ export class CreateMachineryDto {
 
   @IsOptional()
   @IsString()
-  productionUnitId?: string;
+  fieldId?: string;
 }

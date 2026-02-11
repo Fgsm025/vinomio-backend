@@ -15,492 +15,552 @@ enum Role {
 }
 
 model User {
-  id              String   @id @default(uuid())
-  email           String   @unique
-  password        String
-  name            String?
-  avatar          String?
-  hasCompletedOnboarding Boolean @default(false) @map("has_completed_onboarding")
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  id                     String   @id @default(uuid())
+  email                  String   @unique
+  password               String
+  name                   String?
+  avatar                 String?
+  hasCompletedOnboarding Boolean  @default(false) @map("has_completed_onboarding")
+  createdAt              DateTime @default(now()) @map("created_at")
+  updatedAt              DateTime @updatedAt @map("updated_at")
 
-  exploitations UserExploitation[]
-  invitations   Invitation[]
+  farms       UserFarm[]
+  invitations Invitation[]
 
   @@map("users")
 }
 
 model Facility {
-  id                  String   @id @default(uuid())
-  name                String
-  description         String?
-  class               String?
-  cadastralReference  String?  @map("cadastral_reference")
-  yearOfConstruction  Int?     @map("year_of_construction")
-  surface             Float?
-  units               Int?
-  maximumStorage      Float?   @map("maximum_storage")
-  latitude            Float?
-  longitude           Float?
-  tenureRegime        String?  @map("tenure_regime")
-  productionUnitId    String?  @map("production_unit_id")
-  sectorId            String?  @map("sector_id")
-  createdAt           DateTime @default(now()) @map("created_at")
-  updatedAt           DateTime @updatedAt @map("updated_at")
+  id                 String   @id @default(uuid())
+  name               String
+  description        String?
+  class              String?
+  cadastralReference String?  @map("cadastral_reference")
+  yearOfConstruction Int?     @map("year_of_construction")
+  surface            Float?
+  units              Int?
+  maximumStorage     Float?   @map("maximum_storage")
+  latitude           Float?
+  longitude          Float?
+  tenureRegime       String?  @map("tenure_regime")
+  fieldId            String?  @map("field_id")
+  plotId             String?  @map("plot_id")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
 
-  productionUnit      ProductionUnit? @relation(fields: [productionUnitId], references: [id], onDelete: SetNull)
-  sector              Sector?         @relation(fields: [sectorId], references: [id], onDelete: SetNull)
+  field Field? @relation(fields: [fieldId], references: [id], onDelete: SetNull)
+  plot  Plot?  @relation(fields: [plotId], references: [id], onDelete: SetNull)
 
   @@map("facilities")
 }
 
 model Machinery {
-  id                  String   @id @default(uuid())
+  id                  String    @id @default(uuid())
   name                String
   type                String?
   brand               String?
-  modelName           String?  @map("model")
-  serialNumber        String?  @map("serial_number")
+  modelName           String?   @map("model")
+  serialNumber        String?   @map("serial_number")
   year                Int?
   description         String?
   status              String?
-  isRegisteredInRoma  Boolean  @default(false) @map("is_registered_in_roma")
+  isRegisteredInRoma  Boolean   @default(false) @map("is_registered_in_roma")
   identifier          String?
-  plateNumber         String?  @map("plate_number")
-  registrationNumber  String?  @map("registration_number")
-  isPropertyOwnership Boolean  @default(false) @map("is_property_ownership")
+  plateNumber         String?   @map("plate_number")
+  registrationNumber  String?   @map("registration_number")
+  isPropertyOwnership Boolean   @default(false) @map("is_property_ownership")
   acquisitionDate     DateTime? @map("acquisition_date")
-  purchasePrice       Float?   @map("purchase_price")
-  currentValue        Float?   @map("current_value")
-  productionUnitId    String?  @map("production_unit_id")
-  createdAt           DateTime @default(now()) @map("created_at")
-  updatedAt           DateTime @updatedAt @map("updated_at")
+  purchasePrice       Float?    @map("purchase_price")
+  currentValue        Float?    @map("current_value")
+  farmId              String?   @map("farm_id")
+  fieldId             String?   @map("field_id")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
 
-  productionUnit      ProductionUnit? @relation(fields: [productionUnitId], references: [id], onDelete: SetNull)
+  farm  Farm?  @relation(fields: [farmId], references: [id], onDelete: SetNull)
+  field Field? @relation(fields: [fieldId], references: [id], onDelete: SetNull)
 
   @@map("machinery")
 }
 
 model Crop {
-  id                            String   @id @default(uuid())
-  product                       String
-  variety                       String?
-  nameOrDescription            String?  @map("name_or_description")
-  exploitationSystem            String?  @map("exploitation_system")
-  agriculturalActivity          String?  @map("agricultural_activity")
-  cropSystem                    String?  @map("crop_system")
-  ecologicalProductionCertificate String? @map("ecological_production_certificate")
-  cropDestination               String?  @map("crop_destination")
-  soilCoverage                  String?  @map("soil_coverage")
-  integratedProduction          Boolean  @default(false) @map("integrated_production")
-  reproductionPlantMaterial     String?  @map("reproduction_plant_material")
-  typeDetail                    String?  @map("type_detail")
-  horizontalPlantingFrame       Float?   @map("horizontal_planting_frame")
-  verticalPlantingFrame         Float?   @map("vertical_planting_frame")
-  plantDensity                  Float?   @map("plant_density")
-  isPermanentCrop               Boolean  @default(false) @map("is_permanent_crop")
-  qualityRegimes                String[] @map("quality_regimes")
-  image                         Json?
-  createdAt                     DateTime @default(now()) @map("created_at")
-  updatedAt                     DateTime @updatedAt @map("updated_at")
+  id                              String   @id @default(uuid())
+  product                         String
+  variety                         String?
+  nameOrDescription               String?  @map("name_or_description")
+  exploitationSystem              String?  @map("exploitation_system")
+  agriculturalActivity            String?  @map("agricultural_activity")
+  cropSystem                      String?  @map("crop_system")
+  ecologicalProductionCertificate String?  @map("ecological_production_certificate")
+  cropDestination                 String?  @map("crop_destination")
+  cropDestinations                String[] @default([]) @map("crop_destinations")
+  soilCoverage                    String?  @map("soil_coverage")
+  integratedProduction            Boolean  @default(false) @map("integrated_production")
+  reproductionPlantMaterial       String?  @map("reproduction_plant_material")
+  typeDetail                      String?  @map("type_detail")
+  horizontalPlantingFrame         Float?   @map("horizontal_planting_frame")
+  verticalPlantingFrame           Float?   @map("vertical_planting_frame")
+  betweenRows                     Float?   @map("between_rows")
+  onRow                           Float?   @map("on_row")
+  plantDensity                    Float?   @map("plant_density")
+  isPermanentCrop                 Boolean  @default(false) @map("is_permanent_crop")
+  qualityRegimes                  String[] @map("quality_regimes")
+  image                           Json?
+  scientificName                  String?  @map("scientific_name")
+  lifespan                        Int?     @map("lifespan")
+  harvestType                     String?  @map("harvest_type")
+  estimatedYieldPerHa             Float?   @map("estimated_yield_per_ha")
+  yieldUnit                       String?  @map("yield_unit")
+  minTemperature                  Float?   @map("min_temperature")
+  maxTemperature                  Float?   @map("max_temperature")
+  waterRequirements               String?  @map("water_requirements")
+  plantingDays                    Int?     @map("planting_days")
+  growingDays                     Int?     @map("growing_days")
+  veraisonDays                    Int?     @map("veraison_days")
+  maturationDays                  Int?     @map("maturation_days")
+  harvestDays                     Int?     @map("harvest_days")
+  postHarvestDays                 Int?     @map("post_harvest_days")
+  createdAt                       DateTime @default(now()) @map("created_at")
+  updatedAt                       DateTime @updatedAt @map("updated_at")
 
-  cropCycles                    CropCycle[]
+  cropCycles CropCycle[]
 
   @@map("crops")
 }
 
 model Animal {
-  id                  String   @id @default(uuid())
-  nameLabel           String   @map("name_label")
-  animalType          String   @map("animal_type")
-  breed               String?
-  sex                 String
-  labelsKeywords      String?  @map("labels_keywords")
-  internalId          String?  @map("internal_id")
-  status              String
-  neutered            Boolean  @default(false)
-  isBreedingStock     Boolean  @default(false) @map("is_breeding_stock")
-  coloring            String?
-  retentionScore      Float?   @map("retention_score")
-  description         String?
-  birthDate           DateTime? @map("birth_date")
-  dam                 String?
-  sire                String?
-  birthWeight         Float?   @map("birth_weight")
-  ageToWean           Int?     @map("age_to_wean")
-  dateWeaned          DateTime? @map("date_weaned")
-  raisedOrPurchased   String?  @map("raised_or_purchased")
-  veterinarian        String?
-  onFeed              Boolean  @default(false) @map("on_feed")
-  feedType            String?  @map("feed_type")
-  measureHarvestsIn   String?  @map("measure_harvests_in")
-  estimatedRevenue    Float?   @map("estimated_revenue")
-  estimatedValue      Float?   @map("estimated_value")
-  productionUnitId    String?  @map("production_unit_id")
-  createdAt           DateTime @default(now()) @map("created_at")
-  updatedAt           DateTime @updatedAt @map("updated_at")
+  id                String    @id @default(uuid())
+  nameLabel         String    @map("name_label")
+  animalType        String    @map("animal_type")
+  breed             String?
+  sex               String
+  labelsKeywords    String?   @map("labels_keywords")
+  internalId        String?   @map("internal_id")
+  status            String
+  neutered          Boolean   @default(false)
+  isBreedingStock   Boolean   @default(false) @map("is_breeding_stock")
+  coloring          String?
+  retentionScore    Float?    @map("retention_score")
+  description       String?
+  birthDate         DateTime? @map("birth_date")
+  dam               String?
+  sire              String?
+  birthWeight       Float?    @map("birth_weight")
+  ageToWean         Int?      @map("age_to_wean")
+  dateWeaned        DateTime? @map("date_weaned")
+  raisedOrPurchased String?   @map("raised_or_purchased")
+  veterinarian      String?
+  onFeed            Boolean   @default(false) @map("on_feed")
+  feedType          String?   @map("feed_type")
+  measureHarvestsIn String?   @map("measure_harvests_in")
+  estimatedRevenue  Float?    @map("estimated_revenue")
+  estimatedValue    Float?    @map("estimated_value")
+  farmId            String?   @map("farm_id")
+  fieldId           String?   @map("field_id")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
 
-  productionUnit      ProductionUnit? @relation(fields: [productionUnitId], references: [id], onDelete: SetNull)
+  farm  Farm?  @relation(fields: [farmId], references: [id], onDelete: SetNull)
+  field Field? @relation(fields: [fieldId], references: [id], onDelete: SetNull)
 
   @@map("animals")
 }
 
 model WaterSource {
-  id                      String   @id @default(uuid())
-  type                    String
-  name                    String
-  description             String?
-  distanceToExploitation  Float?   @map("distance_to_exploitation")
-  productionUnitId        String?  @map("production_unit_id")
-  createdAt               DateTime @default(now()) @map("created_at")
-  updatedAt               DateTime @updatedAt @map("updated_at")
+  id             String   @id @default(uuid())
+  type           String
+  name           String
+  description    String?
+  distanceToFarm Float?   @map("distance_to_farm")
+  fieldId        String?  @map("field_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
-  productionUnit          ProductionUnit? @relation(fields: [productionUnitId], references: [id], onDelete: SetNull)
+  field Field? @relation(fields: [fieldId], references: [id], onDelete: SetNull)
 
   @@map("water_sources")
 }
 
-model Exploitation {
-  id              String   @id @default(uuid())
-  name            String
-  location        String?
-  country         String?
-  province        String?
-  latitude        Float?
-  longitude       Float?
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+model Farm {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  location  String?
+  country   String?
+  province  String?
+  latitude  Float?
+  longitude Float?
+  
+  farmSize           Float?    @map("farm_size")
+  primaryProduction  String?   @map("primary_production")
+  
+  irrigationSystem   String?   @map("irrigation_system")
+  
+  hasFrost           Boolean   @default(false) @map("has_frost")
+  frostMonths        String[]  @default([]) @map("frost_months")
+  rainyMonths        String[]  @default([]) @map("rainy_months")
+  avgTemperature     String?   @map("avg_temperature")
+  
+  lastFrostDate      String?   @map("last_frost_date")
+  firstFrostDate     String?   @map("first_frost_date")
+  
+  certifications     String[]  @default([]) @map("certifications")
+  
+  workingHoursStart  String?   @map("working_hours_start")
+  workingHoursEnd    String?   @map("working_hours_end")
+  harvestDays        String[]  @default([]) @map("harvest_days")
+  growingSeasonStart String?   @map("growing_season_start")
+  teamSize           String?   @map("team_size")
+  
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  users              UserExploitation[]
-  invitations        Invitation[]
-  productionUnits    ProductionUnit[]
-  teamMembers        TeamMember[]
+  users               UserFarm[]
+  invitations         Invitation[]
+  fields              Field[]
+  machinery           Machinery[]
+  animals             Animal[]
+  teamMembers         TeamMember[]
   traceabilityRecords TraceabilityRecord[]
-  products           Product[]
-  suppliers          Supplier[]
-  stockMovements     Stock[]
-  purchases          Purchase[]
+  products            Product[]
+  suppliers           Supplier[]
+  stockMovements      Stock[]
+  purchases           Purchase[]
 
-  @@map("exploitations")
+  @@map("farms")
 }
 
-model UserExploitation {
-  id             String   @id @default(uuid())
-  userId         String   @map("user_id")
-  exploitationId String   @map("exploitation_id")
-  role           Role
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+model UserFarm {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  farmId    String   @map("farm_id")
+  role      Role
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  exploitation Exploitation @relation(fields: [exploitationId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  farm Farm @relation(fields: [farmId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, exploitationId])
-  @@map("user_exploitations")
+  @@unique([userId, farmId])
+  @@map("user_farms")
 }
 
 model Invitation {
-  id             String   @id @default(uuid())
-  email          String
-  exploitationId String   @map("exploitation_id")
-  role           Role
-  invitedById    String   @map("invited_by_id")
-  token          String   @unique
-  status         String   @default("pending")
-  expiresAt      DateTime @map("expires_at")
-  acceptedAt     DateTime? @map("accepted_at")
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  id          String    @id @default(uuid())
+  email       String
+  farmId      String    @map("farm_id")
+  role        Role
+  invitedById String    @map("invited_by_id")
+  token       String    @unique
+  status      String    @default("pending")
+  expiresAt   DateTime  @map("expires_at")
+  acceptedAt  DateTime? @map("accepted_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
 
-  invitedBy    User         @relation(fields: [invitedById], references: [id], onDelete: Cascade)
-  exploitation Exploitation @relation(fields: [exploitationId], references: [id], onDelete: Cascade)
+  invitedBy User @relation(fields: [invitedById], references: [id], onDelete: Cascade)
+  farm      Farm @relation(fields: [farmId], references: [id], onDelete: Cascade)
 
   @@map("invitations")
 }
 
-model ProductionUnit {
-  id                        String   @id @default(uuid())
-  name                      String
-  exploitationId            String?  @map("exploitation_id")
-  productionType            String   @map("production_type")
-  cropCategory              String?  @map("crop_category")
-  specificVariety           String?  @map("specific_variety")
-  yearEstablished           Int?     @map("year_established")
-  totalArea                 Float?   @map("total_area")
-  associatedSectors         String[] @map("associated_sectors")
-  primaryLocation           String?  @map("primary_location")
-  managementType            String   @map("management_type")
-  certification             String?
-  tenureRegime              String   @map("tenure_regime")
-  isActive                  Boolean  @default(true) @map("is_active")
-  hasIrrigationSystem       Boolean  @default(false) @map("has_irrigation_system")
-  responsibleManager        String?  @map("responsible_manager")
-  expectedAnnualProduction  Json?    @map("expected_annual_production")
-  notes                     String?
-  color                     String?
-  createdAt                 DateTime @default(now()) @map("created_at")
-  updatedAt                 DateTime @updatedAt @map("updated_at")
+model Field {
+  id                       String   @id @default(uuid())
+  name                     String
+  farmId                   String?  @map("farm_id")
+  productionType           String   @map("production_type")
+  cropCategory             String?  @map("crop_category")
+  specificVariety          String?  @map("specific_variety")
+  yearEstablished          Int?     @map("year_established")
+  primaryLocation          String?  @map("primary_location")
+  managementType           String   @map("management_type")
+  certification            String?
+  tenureRegime             String   @map("tenure_regime")
+  isActive                 Boolean  @default(true) @map("is_active")
+  hasIrrigationSystem      Boolean  @default(false) @map("has_irrigation_system")
+  responsibleManager       String?  @map("responsible_manager")
+  expectedAnnualProduction Json?    @map("expected_annual_production")
+  notes                    String?
+  color                    String?
+  createdAt                DateTime @default(now()) @map("created_at")
+  updatedAt                DateTime @updatedAt @map("updated_at")
 
-  exploitation              Exploitation? @relation(fields: [exploitationId], references: [id], onDelete: SetNull)
-  sectors                   Sector[]
-  facilities                Facility[]
-  machinery                 Machinery[]
-  animals                   Animal[]
-  waterSources              WaterSource[]
-  cropCycles                CropCycle[]
-  livestockGroups           LivestockGroup[]
-  irrigationSchedules       IrrigationSchedule[]
-  rainfallEvents            RainfallEvent[]
-  traceabilityRecords       TraceabilityRecord[]
+  farm                Farm?                @relation(fields: [farmId], references: [id], onDelete: SetNull)
+  plots               Plot[]
+  facilities          Facility[]
+  machinery           Machinery[]
+  animals             Animal[]
+  waterSources        WaterSource[]
+  cropCycles          CropCycle[]
+  livestockGroups     LivestockGroup[]
+  irrigationSchedules IrrigationSchedule[]
+  rainfallEvents      RainfallEvent[]
+  traceabilityRecords TraceabilityRecord[]
 
-  @@map("production_units")
+  @@map("fields")
 }
 
-model Sector {
-  id                        String   @id @default(uuid())
-  name                      String
-  sigpacCode                String?  @map("sigpac_code")
-  surface                   Float?
-  hasCadastralReference     Boolean  @default(false) @map("has_cadastral_reference")
-  isCommunalPasture         Boolean  @default(false) @map("is_communal_pasture")
-  isPasturesCommonInCommon  Boolean  @default(false) @map("is_pastures_common_in_common")
-  tenureRegime              String?  @map("tenure_regime")
-  productionUnitId          String?  @map("production_unit_id")
-  color                     String?
-  facilityBuildingIds       String[] @map("facility_building_ids")
-  createdAt                 DateTime @default(now()) @map("created_at")
-  updatedAt                 DateTime @updatedAt @map("updated_at")
+model Plot {
+  id                       String   @id @default(uuid())
+  name                     String
+  sigpacCode               String?  @map("sigpac_code")
+  geometry                 Json?
+  surface                  Float
+  hasCadastralReference    Boolean  @default(false) @map("has_cadastral_reference")
+  isCommunalPasture        Boolean  @default(false) @map("is_communal_pasture")
+  isPasturesCommonInCommon Boolean  @default(false) @map("is_pastures_common_in_common")
+  tenureRegime             String?  @map("tenure_regime")
+  fieldId                  String?  @map("field_id")
+  color                    String?
+  isAutoGenerated          Boolean  @default(false) @map("is_auto_generated")
+  facilityBuildingIds      String[] @map("facility_building_ids")
+  createdAt                DateTime @default(now()) @map("created_at")
+  updatedAt                DateTime @updatedAt @map("updated_at")
 
-  productionUnit            ProductionUnit?       @relation(fields: [productionUnitId], references: [id], onDelete: SetNull)
+  field                     Field?                     @relation(fields: [fieldId], references: [id], onDelete: SetNull)
   facilities                Facility[]
   cropCycles                CropCycle[]
   grazingLocations          GrazingLocation[]
-  sectorsOnIrrigationSchedule SectorOnIrrigationSchedule[]
+  plotsOnIrrigationSchedule PlotOnIrrigationSchedule[]
   rainfallEvents            RainfallEvent[]
   traceabilityRecords       TraceabilityRecord[]
 
-  @@map("sectors")
+  @@map("plots")
 }
 
 model CropCycle {
-  id                  String   @id @default(uuid())
-  cropId              String   @map("crop_id")
-  variety             String?
-  productionUnitId    String?  @map("production_unit_id")
-  sectorId            String   @map("sector_id")
-  region              String?
-  plantingDate        DateTime @map("planting_date")
-  plantedArea         Float?   @map("planted_area")
-  plantCount          Int?     @map("plant_count")
-  plantDensity        Float?   @map("plant_density")
-  currentStatus       String   @map("current_status")
-  phenologyTemplateId String?  @map("phenology_template_id")
-  manualAdjustments   Json?    @map("manual_adjustments")
-  notes               String?
-  createdAt           DateTime @default(now()) @map("created_at")
-  updatedAt           DateTime @updatedAt @map("updated_at")
+  id                     String    @id @default(uuid())
+  cropId                 String    @map("crop_id")
+  variety                String?
+  fieldId                String?   @map("field_id")
+  plotId                 String    @map("plot_id")
+  region                 String?
+  season                 String    @default("") @map("season")
+  status                 String    @default("active") @map("status")
+  plantingDate           DateTime  @map("planting_date")
+  endDate                DateTime? @map("end_date")
+  endReason              String?   @map("end_reason")
+  plantedArea            Float?    @map("planted_area")
+  plantCount             Int?      @map("plant_count")
+  plantDensity           Float?    @map("plant_density")
+  currentStatus          String    @map("current_status")
+  phenologyTemplateId    String?   @map("phenology_template_id")
+  manualAdjustments      Json?     @map("manual_adjustments")
+  notes                  String?
+  seedBatch              String?   @map("seed_batch")
+  nurseryOrigin          String?   @map("nursery_origin")
+  supplier               String?   @map("supplier")
+  estimatedHarvestDate   DateTime? @map("estimated_harvest_date")
+  actualHarvestStartDate DateTime? @map("actual_harvest_start_date")
+  actualHarvestEndDate   DateTime? @map("actual_harvest_end_date")
+  actualYield            Float?    @map("actual_yield")
+  yieldUnit              String?   @map("yield_unit")
+  previousCropId         String?   @map("previous_crop_id")
+  nextPlannedCropId      String?   @map("next_planned_crop_id")
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
 
-  crop                Crop           @relation(fields: [cropId], references: [id])
-  productionUnit      ProductionUnit? @relation(fields: [productionUnitId], references: [id], onDelete: SetNull)
-  sector              Sector         @relation(fields: [sectorId], references: [id])
+  crop  Crop   @relation(fields: [cropId], references: [id])
+  field Field? @relation(fields: [fieldId], references: [id], onDelete: SetNull)
+  plot  Plot   @relation(fields: [plotId], references: [id])
 
   @@map("crop_cycles")
 }
 
 model LivestockGroup {
-  id                  String   @id @default(uuid())
-  name                String
-  animalIds           String[] @map("animal_ids")
-  productionUnitId    String?  @map("production_unit_id")
-  createdAt           DateTime @default(now()) @map("created_at")
-  updatedAt           DateTime @updatedAt @map("updated_at")
+  id        String   @id @default(uuid())
+  name      String
+  animalIds String[] @map("animal_ids")
+  fieldId   String?  @map("field_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  productionUnit      ProductionUnit? @relation(fields: [productionUnitId], references: [id], onDelete: SetNull)
-  grazingLocations    GrazingLocation[]
+  field            Field?            @relation(fields: [fieldId], references: [id], onDelete: SetNull)
+  grazingLocations GrazingLocation[]
 
   @@map("livestock_groups")
 }
 
 model GrazingLocation {
-  id                  String   @id @default(uuid())
-  name                String
-  type                String
-  polygonId           String?  @map("polygon_id")
-  livestockGroupId    String?  @map("livestock_group_id")
-  animalCount         Int?     @map("animal_count")
-  surface             Float
-  entryDate           DateTime? @map("entry_date")
-  daysInLocation      Int?     @map("days_in_location")
-  animalDaysPerAcre   Float?   @map("animal_days_per_acre")
-  sectorId            String   @map("sector_id")
-  color               String?
-  createdAt           DateTime @default(now()) @map("created_at")
-  updatedAt           DateTime @updatedAt @map("updated_at")
+  id                String    @id @default(uuid())
+  name              String
+  type              String
+  polygonId         String?   @map("polygon_id")
+  livestockGroupId  String?   @map("livestock_group_id")
+  animalCount       Int?      @map("animal_count")
+  surface           Float
+  entryDate         DateTime? @map("entry_date")
+  daysInLocation    Int?      @map("days_in_location")
+  animalDaysPerAcre Float?    @map("animal_days_per_acre")
+  plotId            String    @map("plot_id")
+  color             String?
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
 
-  sector              Sector         @relation(fields: [sectorId], references: [id])
-  livestockGroup      LivestockGroup? @relation(fields: [livestockGroupId], references: [id], onDelete: SetNull)
+  plot           Plot            @relation(fields: [plotId], references: [id])
+  livestockGroup LivestockGroup? @relation(fields: [livestockGroupId], references: [id], onDelete: SetNull)
 
   @@map("grazing_locations")
 }
 
 model IrrigationSchedule {
-  id                      String   @id @default(uuid())
-  scheduleName            String   @map("schedule_name")
-  productionUnitId        String?  @map("production_unit_id")
-  fieldName               String?  @map("field_name")
-  lotName                 String?  @map("lot_name")
-  cropType                String?  @map("crop_type")
-  irrigationMethod        String   @map("irrigation_method")
-  status                  String
-  frequency               String?
-  duration                Int?
-  waterVolume             Float?   @map("water_volume")
-  nextScheduledDate       DateTime? @map("next_scheduled_date")
-  lastExecutedDate        DateTime? @map("last_executed_date")
-  startTime               String?  @map("start_time")
-  endTime                 String?  @map("end_time")
-  daysOfWeek              String[] @map("days_of_week")
-  soilMoistureThreshold   Float?   @map("soil_moisture_threshold")
-  weatherDependent        Boolean  @default(false) @map("weather_dependent")
-  notes                   String?
-  createdAt               DateTime @default(now()) @map("created_at")
-  updatedAt               DateTime @updatedAt @map("updated_at")
+  id                    String    @id @default(uuid())
+  scheduleName          String    @map("schedule_name")
+  fieldId               String?   @map("field_id")
+  fieldName             String?   @map("field_name")
+  lotName               String?   @map("lot_name")
+  cropType              String?   @map("crop_type")
+  irrigationMethod      String    @map("irrigation_method")
+  status                String
+  frequency             String?
+  duration              Int?
+  waterVolume           Float?    @map("water_volume")
+  nextScheduledDate     DateTime? @map("next_scheduled_date")
+  lastExecutedDate      DateTime? @map("last_executed_date")
+  startTime             String?   @map("start_time")
+  endTime               String?   @map("end_time")
+  daysOfWeek            String[]  @map("days_of_week")
+  soilMoistureThreshold Float?    @map("soil_moisture_threshold")
+  weatherDependent      Boolean   @default(false) @map("weather_dependent")
+  notes                 String?
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
 
-  productionUnit          ProductionUnit?       @relation(fields: [productionUnitId], references: [id], onDelete: SetNull)
-  sectorsOnSchedule       SectorOnIrrigationSchedule[]
+  field           Field?                     @relation(fields: [fieldId], references: [id], onDelete: SetNull)
+  plotsOnSchedule PlotOnIrrigationSchedule[]
 
   @@map("irrigation_schedules")
 }
 
-model SectorOnIrrigationSchedule {
-  irrigationScheduleId   String   @map("irrigation_schedule_id")
-  sectorId               String   @map("sector_id")
+model PlotOnIrrigationSchedule {
+  irrigationScheduleId String @map("irrigation_schedule_id")
+  plotId               String @map("plot_id")
 
-  irrigationSchedule     IrrigationSchedule @relation(fields: [irrigationScheduleId], references: [id], onDelete: Cascade)
-  sector                 Sector             @relation(fields: [sectorId], references: [id], onDelete: Cascade)
+  irrigationSchedule IrrigationSchedule @relation(fields: [irrigationScheduleId], references: [id], onDelete: Cascade)
+  plot               Plot               @relation(fields: [plotId], references: [id], onDelete: Cascade)
 
-  @@id([irrigationScheduleId, sectorId])
-  @@map("sector_on_irrigation_schedule")
+  @@id([irrigationScheduleId, plotId])
+  @@map("plot_on_irrigation_schedule")
 }
 
 model RainfallEvent {
-  id                  String   @id @default(uuid())
-  productionUnitId    String   @map("production_unit_id")
-  sectorId            String?  @map("sector_id")
-  startDate           DateTime @map("start_date")
-  endDate             DateTime? @map("end_date")
-  amountMm            Float?   @map("amount_mm")
-  intensity           String?
-  source              String?
-  notes               String?
-  createdAt           DateTime @default(now()) @map("created_at")
-  updatedAt           DateTime @updatedAt @map("updated_at")
+  id        String    @id @default(uuid())
+  fieldId   String    @map("field_id")
+  plotId    String?   @map("plot_id")
+  startDate DateTime  @map("start_date")
+  endDate   DateTime? @map("end_date")
+  amountMm  Float?    @map("amount_mm")
+  intensity String?
+  source    String?
+  notes     String?
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
 
-  productionUnit      ProductionUnit @relation(fields: [productionUnitId], references: [id])
-  sector              Sector?        @relation(fields: [sectorId], references: [id], onDelete: SetNull)
+  field Field @relation(fields: [fieldId], references: [id])
+  plot  Plot? @relation(fields: [plotId], references: [id], onDelete: SetNull)
 
   @@map("rainfall_events")
 }
 
 model TeamMember {
-  id                  String   @id @default(uuid())
-  name                String
-  exploitationId      String   @map("exploitation_id")
-  role                String?
-  email               String?
-  phone               String?
-  startDate           DateTime? @map("start_date")
-  status              String   @default("active")
-  notes               String?
-  createdAt           DateTime @default(now()) @map("created_at")
-  updatedAt           DateTime @updatedAt @map("updated_at")
+  id        String    @id @default(uuid())
+  name      String
+  farmId    String    @map("farm_id")
+  role      String?
+  email     String?
+  phone     String?
+  startDate DateTime? @map("start_date")
+  status    String    @default("active")
+  notes     String?
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
 
-  exploitation        Exploitation @relation(fields: [exploitationId], references: [id])
+  farm Farm @relation(fields: [farmId], references: [id])
 
   @@map("team_members")
 }
 
 model TraceabilityRecord {
-  id                  String   @id @default(uuid())
-  productId           String   @map("product_id")
-  lotNumber           String   @map("lot_number")
-  exploitationId      String   @map("exploitation_id")
-  productionUnitId    String?  @map("production_unit_id")
-  sectorId            String?  @map("sector_id")
-  applicationDate     DateTime @map("application_date")
-  appliedBy           String   @map("applied_by")
-  notes               String?
-  createdAt           DateTime @default(now()) @map("created_at")
-  updatedAt           DateTime @updatedAt @map("updated_at")
+  id              String   @id @default(uuid())
+  productId       String   @map("product_id")
+  lotNumber       String   @map("lot_number")
+  farmId          String   @map("farm_id")
+  fieldId         String?  @map("field_id")
+  plotId          String?  @map("plot_id")
+  applicationDate DateTime @map("application_date")
+  appliedBy       String   @map("applied_by")
+  notes           String?
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
 
-  exploitation        Exploitation    @relation(fields: [exploitationId], references: [id])
-  productionUnit      ProductionUnit? @relation(fields: [productionUnitId], references: [id], onDelete: SetNull)
-  sector              Sector?         @relation(fields: [sectorId], references: [id], onDelete: SetNull)
+  farm  Farm   @relation(fields: [farmId], references: [id])
+  field Field? @relation(fields: [fieldId], references: [id], onDelete: SetNull)
+  plot  Plot?  @relation(fields: [plotId], references: [id], onDelete: SetNull)
 
   @@map("traceability_records")
 }
 
 model Product {
-  id             String   @id @default(uuid())
-  name           String
-  category       String?
-  unit           String?  @default("unit")
-  description    String?
-  exploitationId String   @map("exploitation_id")
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  id          String   @id @default(uuid())
+  name        String
+  category    String?
+  unit        String?  @default("unit")
+  description String?
+  farmId      String   @map("farm_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
-  exploitation   Exploitation @relation(fields: [exploitationId], references: [id], onDelete: Cascade)
+  farm           Farm    @relation(fields: [farmId], references: [id], onDelete: Cascade)
   stockMovements Stock[]
 
   @@map("products")
 }
 
 model Supplier {
-  id             String   @id @default(uuid())
-  name           String
-  phone          String?
-  email          String?
-  status         String   @default("active")
-  exploitationId String   @map("exploitation_id")
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  id        String   @id @default(uuid())
+  name      String
+  phone     String?
+  email     String?
+  status    String   @default("active")
+  farmId    String   @map("farm_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  exploitation Exploitation @relation(fields: [exploitationId], references: [id], onDelete: Cascade)
-  purchases    Purchase[]
+  farm      Farm       @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  purchases Purchase[]
 
   @@map("suppliers")
 }
 
 model Stock {
-  id             String   @id @default(uuid())
-  productId      String   @map("product_id")
-  quantity       Int
-  locationId     String?  @map("location_id")
-  date           DateTime @db.Date
-  type           String
-  exploitationId String   @map("exploitation_id")
-  purchaseId     String?  @unique @map("purchase_id")
-  createdAt      DateTime @default(now()) @map("created_at")
+  id         String   @id @default(uuid())
+  productId  String   @map("product_id")
+  quantity   Int
+  locationId String?  @map("location_id")
+  date       DateTime @db.Date
+  type       String
+  farmId     String   @map("farm_id")
+  purchaseId String?  @unique @map("purchase_id")
+  createdAt  DateTime @default(now()) @map("created_at")
 
-  exploitation Exploitation @relation(fields: [exploitationId], references: [id], onDelete: Cascade)
-  product      Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
-  purchase     Purchase?    @relation(fields: [purchaseId], references: [id], onDelete: SetNull)
+  farm     Farm      @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  product  Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  purchase Purchase? @relation(fields: [purchaseId], references: [id], onDelete: SetNull)
 
   @@map("stock")
 }
 
 model Purchase {
-  id             String   @id @default(uuid())
-  supplierId     String   @map("supplier_id")
-  total          Decimal  @db.Decimal(12, 2)
-  date           DateTime @db.Date
-  exploitationId String   @map("exploitation_id")
-  createdAt      DateTime @default(now()) @map("created_at")
+  id         String   @id @default(uuid())
+  supplierId String   @map("supplier_id")
+  total      Decimal  @db.Decimal(12, 2)
+  date       DateTime @db.Date
+  farmId     String   @map("farm_id")
+  createdAt  DateTime @default(now()) @map("created_at")
 
-  exploitation Exploitation @relation(fields: [exploitationId], references: [id], onDelete: Cascade)
-  supplier     Supplier     @relation(fields: [supplierId], references: [id], onDelete: Restrict)
-  stock        Stock?
+  farm     Farm     @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  supplier Supplier @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  stock    Stock?
 
   @@map("purchases")
 }

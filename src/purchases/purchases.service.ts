@@ -7,20 +7,20 @@ import { UpdatePurchaseDto } from './dto/update-purchase.dto';
 export class PurchasesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(createPurchaseDto: CreatePurchaseDto, exploitationId: string) {
+  async create(createPurchaseDto: CreatePurchaseDto, farmId: string) {
     return this.prisma.purchase.create({
       data: {
         ...createPurchaseDto,
-        exploitationId,
+        farmId,
         total: createPurchaseDto.total,
         date: new Date(createPurchaseDto.date),
       },
     });
   }
 
-  async findAll(exploitationId: string) {
+  async findAll(farmId: string) {
     return this.prisma.purchase.findMany({
-      where: { exploitationId },
+      where: { farmId },
       include: {
         supplier: true,
         stock: true,
@@ -29,11 +29,11 @@ export class PurchasesService {
     });
   }
 
-  async findOne(id: string, exploitationId: string) {
+  async findOne(id: string, farmId: string) {
     const purchase = await this.prisma.purchase.findFirst({
       where: {
         id,
-        exploitationId,
+        farmId,
       },
       include: {
         supplier: true,
@@ -48,8 +48,8 @@ export class PurchasesService {
     return purchase;
   }
 
-  async update(id: string, updatePurchaseDto: UpdatePurchaseDto, exploitationId: string) {
-    await this.findOne(id, exploitationId);
+  async update(id: string, updatePurchaseDto: UpdatePurchaseDto, farmId: string) {
+    await this.findOne(id, farmId);
 
     return this.prisma.purchase.update({
       where: { id },
@@ -60,8 +60,8 @@ export class PurchasesService {
     });
   }
 
-  async remove(id: string, exploitationId: string) {
-    await this.findOne(id, exploitationId);
+  async remove(id: string, farmId: string) {
+    await this.findOne(id, farmId);
     return this.prisma.purchase.delete({ where: { id } });
   }
 }

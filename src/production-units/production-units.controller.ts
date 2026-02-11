@@ -9,15 +9,17 @@ import {
   Query,
   ParseUUIDPipe,
   UseGuards,
+  Patch,
 } from '@nestjs/common';
 import { ProductionUnitsService } from './production-units.service';
 import { CreateProductionUnitDto } from './dto/create-production-unit.dto';
 import { UpdateProductionUnitDto } from './dto/update-production-unit.dto';
+import { CreateSectorDto } from '../sectors/dto/create-sector.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { CurrentUserPayload } from '../auth/decorators/current-user.decorator';
 
-@Controller('production-units')
+@Controller('fields')
 export class ProductionUnitsController {
   constructor(
     private readonly productionUnitsService: ProductionUnitsService,
@@ -26,30 +28,30 @@ export class ProductionUnitsController {
   @Post()
   @UseGuards(JwtAuthGuard)
   create(
-    @Body() dto: CreateProductionUnitDto,
+    @Body() dto: CreateProductionUnitDto & { geometry?: Record<string, unknown>; surface?: number },
     @CurrentUser() user: CurrentUserPayload,
   ) {
-    if (!user.exploitationId && !user.needsOnboarding) {
-      throw new Error('User must have an exploitation assigned or need onboarding');
+    if (!user.farmId && !user.needsOnboarding) {
+      throw new Error('User must have a farm assigned or need onboarding');
     }
     return this.productionUnitsService.create({
       ...dto,
-      exploitationId: dto.exploitationId || user.exploitationId,
-    });
+      farmId: dto.farmId || user.farmId,
+    }, user.userId);
   }
 
   @Get()
   @UseGuards(JwtAuthGuard)
   findAll(
-    @Query('exploitationId') exploitationId: string | undefined,
+    @Query('farmId') farmId: string | undefined,
     @CurrentUser() user: CurrentUserPayload,
   ) {
     if (user.needsOnboarding) {
       return [];
     }
-    const targetExploitationId = exploitationId || user.exploitationId;
-    if (targetExploitationId) {
-      return this.productionUnitsService.findByExploitation(targetExploitationId);
+    const targetFarmId = farmId || user.farmId;
+    if (targetFarmId) {
+      return this.productionUnitsService.findByFarm(targetFarmId);
     }
     return this.productionUnitsService.findAll(user.userId);
   }
@@ -80,5 +82,15 @@ export class ProductionUnitsController {
     @CurrentUser() user: CurrentUserPayload,
   ) {
     return this.productionUnitsService.remove(id, user.userId);
+  }
+
+  @Patch(':id/subdivide')
+  @UseGuards(JwtAuthGuard)
+  subdivide(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: { plots: CreateSectorDto[] },
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    return this.productionUnitsService.subdivideField(id, body.plots, user.userId);
   }
 }

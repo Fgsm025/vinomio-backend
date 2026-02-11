@@ -26,18 +26,18 @@ export class MachineryController {
     @Body() dto: CreateMachineryDto,
     @CurrentUser() user: CurrentUserPayload,
   ) {
-    if (!user.exploitationId) {
-      throw new Error('User must have an exploitation assigned');
+    if (!user.farmId) {
+      throw new Error('User must have a farm assigned');
     }
-    return this.machineryService.create(dto, user.exploitationId);
+    return this.machineryService.create(dto, user.farmId);
   }
 
   @Get()
   findAll(@CurrentUser() user: CurrentUserPayload) {
-    if (!user.exploitationId) {
-      throw new Error('User must have an exploitation assigned');
+    if (!user.farmId) {
+      throw new Error('User must have a farm assigned');
     }
-    return this.machineryService.findAll(user.exploitationId);
+    return this.machineryService.findAll(user.farmId);
   }
 
   @Get(':id')
@@ -45,10 +45,10 @@ export class MachineryController {
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user: CurrentUserPayload,
   ) {
-    if (!user.exploitationId) {
-      throw new Error('User must have an exploitation assigned');
+    if (!user.farmId) {
+      throw new Error('User must have a farm assigned');
     }
-    return this.machineryService.findOne(id, user.exploitationId);
+    return this.machineryService.findOne(id, user.farmId);
   }
 
   @Put(':id')
@@ -57,10 +57,10 @@ export class MachineryController {
     @Body() dto: UpdateMachineryDto,
     @CurrentUser() user: CurrentUserPayload,
   ) {
-    if (!user.exploitationId) {
-      throw new Error('User must have an exploitation assigned');
+    if (!user.farmId) {
+      throw new Error('User must have a farm assigned');
     }
-    return this.machineryService.update(id, dto, user.exploitationId);
+    return this.machineryService.update(id, dto, user.farmId);
   }
 
   @Delete(':id')
@@ -68,9 +68,9 @@ export class MachineryController {
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user: CurrentUserPayload,
   ) {
-    if (!user.exploitationId) {
-      throw new Error('User must have an exploitation assigned');
+    if (!user.farmId) {
+      throw new Error('User must have a farm assigned');
     }
-    return this.machineryService.remove(id, user.exploitationId);
+    return this.machineryService.remove(id, user.farmId);
   }
 }

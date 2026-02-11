@@ -11,6 +11,7 @@ import { ExploitationsModule } from './exploitations/exploitations.module';
 import { ProductionUnitsModule } from './production-units/production-units.module';
 import { SectorsModule } from './sectors/sectors.module';
 import { CropCyclesModule } from './crop-cycles/crop-cycles.module';
+import { CampaignsModule } from './campaigns/campaigns.module';
 import { LivestockGroupsModule } from './livestock-groups/livestock-groups.module';
 import { GrazingLocationsModule } from './grazing-locations/grazing-locations.module';
 import { IrrigationSchedulesModule } from './irrigation-schedules/irrigation-schedules.module';
@@ -34,6 +35,7 @@ import { InvitationsModule } from './invitations/invitations.module';
     ProductionUnitsModule,
     SectorsModule,
     CropCyclesModule,
+    CampaignsModule,
     LivestockGroupsModule,
     GrazingLocationsModule,
     IrrigationSchedulesModule,

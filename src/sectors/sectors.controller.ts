@@ -13,7 +13,7 @@ import { SectorsService } from './sectors.service';
 import { CreateSectorDto } from './dto/create-sector.dto';
 import { UpdateSectorDto } from './dto/update-sector.dto';
 
-@Controller('sectors')
+@Controller('plots')
 export class SectorsController {
   constructor(private readonly sectorsService: SectorsService) {}
 
@@ -23,9 +23,9 @@ export class SectorsController {
   }
 
   @Get()
-  findAll(@Query('productionUnitId') productionUnitId?: string) {
-    if (productionUnitId) {
-      return this.sectorsService.findByProductionUnit(productionUnitId);
+  findAll(@Query('fieldId') fieldId?: string) {
+    if (fieldId) {
+      return this.sectorsService.findByField(fieldId);
     }
     return this.sectorsService.findAll();
   }

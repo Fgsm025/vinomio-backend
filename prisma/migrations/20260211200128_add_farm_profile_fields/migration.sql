@@ -1,0 +1,16 @@
+-- AlterTable
+ALTER TABLE "farms" ADD COLUMN     "avg_temperature" TEXT,
+ADD COLUMN     "certifications" TEXT[] DEFAULT ARRAY[]::TEXT[],
+ADD COLUMN     "farm_size" DOUBLE PRECISION,
+ADD COLUMN     "first_frost_date" TEXT,
+ADD COLUMN     "frost_months" TEXT[] DEFAULT ARRAY[]::TEXT[],
+ADD COLUMN     "growing_season_start" TEXT,
+ADD COLUMN     "harvest_days" TEXT[] DEFAULT ARRAY[]::TEXT[],
+ADD COLUMN     "has_frost" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "irrigation_system" TEXT,
+ADD COLUMN     "last_frost_date" TEXT,
+ADD COLUMN     "primary_production" TEXT,
+ADD COLUMN     "rainy_months" TEXT[] DEFAULT ARRAY[]::TEXT[],
+ADD COLUMN     "team_size" TEXT,
+ADD COLUMN     "working_hours_end" TEXT,
+ADD COLUMN     "working_hours_start" TEXT;

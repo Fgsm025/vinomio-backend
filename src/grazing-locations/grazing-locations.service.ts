@@ -14,14 +14,14 @@ export class GrazingLocationsService {
   async findAll() {
     return this.prisma.grazingLocation.findMany({
       orderBy: { createdAt: 'desc' },
-      include: { sector: true, livestockGroup: true },
+      include: { plot: true, livestockGroup: true },
     });
   }
 
   async findOne(id: string) {
     const location = await this.prisma.grazingLocation.findUnique({
       where: { id },
-      include: { sector: true, livestockGroup: true },
+      include: { plot: true, livestockGroup: true },
     });
     if (!location) {
       throw new NotFoundException(`GrazingLocation with id "${id}" not found`);

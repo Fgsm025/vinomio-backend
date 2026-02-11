@@ -7,7 +7,7 @@ export class CreateTeamMemberDto {
 
   @IsString()
   @IsNotEmpty()
-  exploitationId: string;
+  farmId: string;
 
   @IsOptional()
   @IsString()

@@ -20,9 +20,9 @@ export class CreateWaterSourceDto {
 
   @IsOptional()
   @IsNumber()
-  distanceToExploitation?: number;
+  distanceToFarm?: number;
 
   @IsOptional()
   @IsString()
-  productionUnitId?: string;
+  fieldId?: string;
 }

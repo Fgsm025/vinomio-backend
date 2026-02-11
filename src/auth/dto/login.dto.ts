@@ -9,5 +9,5 @@ export class LoginDto {
 
   @IsOptional()
   @IsString()
-  exploitationId?: string;
+  farmId?: string;
 }

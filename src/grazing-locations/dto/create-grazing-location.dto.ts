@@ -38,7 +38,7 @@ export class CreateGrazingLocationDto {
 
   @IsString()
   @IsNotEmpty()
-  sectorId: string;
+  plotId: string;
 
   @IsOptional()
   @IsString()

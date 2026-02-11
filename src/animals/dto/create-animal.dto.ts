@@ -110,5 +110,5 @@ export class CreateAnimalDto {
 
   @IsOptional()
   @IsString()
-  productionUnitId?: string;
+  fieldId?: string;
 }

@@ -10,9 +10,9 @@ export class UsersService {
     return this.prisma.user.findUnique({
       where: { email },
       include: {
-        exploitations: {
+        farms: {
           include: {
-            exploitation: true,
+            farm: true,
           },
         },
       },
@@ -61,11 +61,11 @@ export class UsersService {
     });
   }
 
-  async getUserExploitations(userId: string) {
-    return this.prisma.userExploitation.findMany({
+  async getUserFarms(userId: string) {
+    return this.prisma.userFarm.findMany({
       where: { userId },
       include: {
-        exploitation: true,
+        farm: true,
       },
     });
   }

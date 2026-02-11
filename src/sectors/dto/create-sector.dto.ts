@@ -5,6 +5,7 @@ import {
   IsNotEmpty,
   IsBoolean,
   IsArray,
+  IsObject,
 } from 'class-validator';
 
 export class CreateSectorDto {
@@ -17,8 +18,12 @@ export class CreateSectorDto {
   sigpacCode?: string;
 
   @IsOptional()
+  @IsObject()
+  geometry?: Record<string, unknown>;
+
   @IsNumber()
-  surface?: number;
+  @IsNotEmpty()
+  surface: number;
 
   @IsOptional()
   @IsBoolean()
@@ -38,7 +43,7 @@ export class CreateSectorDto {
 
   @IsOptional()
   @IsString()
-  productionUnitId?: string;
+  fieldId?: string;
 
   @IsOptional()
   @IsString()

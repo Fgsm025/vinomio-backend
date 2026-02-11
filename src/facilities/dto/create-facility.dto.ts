@@ -52,9 +52,9 @@ export class CreateFacilityDto {
 
   @IsOptional()
   @IsString()
-  productionUnitId?: string;
+  fieldId?: string;
 
   @IsOptional()
   @IsString()
-  sectorId?: string;
+  plotId?: string;
 }

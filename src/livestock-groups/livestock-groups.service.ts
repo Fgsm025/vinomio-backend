@@ -14,14 +14,14 @@ export class LivestockGroupsService {
   async findAll() {
     return this.prisma.livestockGroup.findMany({
       orderBy: { createdAt: 'desc' },
-      include: { productionUnit: true },
+      include: { field: true },
     });
   }
 
   async findOne(id: string) {
     const group = await this.prisma.livestockGroup.findUnique({
       where: { id },
-      include: { productionUnit: true },
+      include: { field: true },
     });
     if (!group) {
       throw new NotFoundException(`LivestockGroup with id "${id}" not found`);
