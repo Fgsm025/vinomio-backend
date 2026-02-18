@@ -8,10 +8,9 @@ import { CropsModule } from './crops/crops.module';
 import { AnimalsModule } from './animals/animals.module';
 import { WaterSourcesModule } from './water-sources/water-sources.module';
 import { ExploitationsModule } from './exploitations/exploitations.module';
-import { ProductionUnitsModule } from './production-units/production-units.module';
-import { SectorsModule } from './sectors/sectors.module';
+import { FieldsModule } from './fields/fields.module';
+import { LotsModule } from './lots/lots.module';
 import { CropCyclesModule } from './crop-cycles/crop-cycles.module';
-import { CampaignsModule } from './campaigns/campaigns.module';
 import { LivestockGroupsModule } from './livestock-groups/livestock-groups.module';
 import { GrazingLocationsModule } from './grazing-locations/grazing-locations.module';
 import { IrrigationSchedulesModule } from './irrigation-schedules/irrigation-schedules.module';
@@ -20,6 +19,7 @@ import { TeamMembersModule } from './team-members/team-members.module';
 import { TraceabilityModule } from './traceability/traceability.module';
 import { PurchasesModule } from './purchases/purchases.module';
 import { InvitationsModule } from './invitations/invitations.module';
+import { WorkflowsModule } from './workflows/workflows.module';
 
 @Module({
   imports: [
@@ -32,10 +32,9 @@ import { InvitationsModule } from './invitations/invitations.module';
     AnimalsModule,
     WaterSourcesModule,
     ExploitationsModule,
-    ProductionUnitsModule,
-    SectorsModule,
+    FieldsModule,
+    LotsModule,
     CropCyclesModule,
-    CampaignsModule,
     LivestockGroupsModule,
     GrazingLocationsModule,
     IrrigationSchedulesModule,
@@ -44,6 +43,7 @@ import { InvitationsModule } from './invitations/invitations.module';
     TraceabilityModule,
     PurchasesModule,
     InvitationsModule,
+    WorkflowsModule,
   ],
 })
 export class AppModule {}

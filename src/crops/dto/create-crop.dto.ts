@@ -84,11 +84,6 @@ export class CreateCropDto {
   isPermanentCrop?: boolean;
 
   @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  qualityRegimes?: string[];
-
-  @IsOptional()
   image?: Record<string, unknown>;
 
   @IsOptional()
@@ -110,7 +105,7 @@ export class CreateCropDto {
 
   @IsOptional()
   @IsString()
-  @IsIn(['kg', 'ton', 'units'])
+  @IsIn(['kg', 'tons', 'liters', 'units'])
   yieldUnit?: string;
 
   @IsOptional()
@@ -149,4 +144,37 @@ export class CreateCropDto {
   @IsOptional()
   @IsNumber()
   postHarvestDays?: number;
+
+  @IsOptional()
+  @IsString()
+  @IsIn(['traditional', 'mother-plant', 'livestock-breeder', 'permanent-crop'])
+  productionType?: string;
+
+  @IsOptional()
+  @IsNumber()
+  propagationRootingDays?: number;
+
+  @IsOptional()
+  @IsNumber()
+  propagationPotDays?: number;
+
+  @IsOptional()
+  @IsNumber()
+  propagationSaleDays?: number;
+
+  @IsOptional()
+  @IsNumber()
+  cuttingsPerExtraction?: number;
+
+  @IsOptional()
+  @IsNumber()
+  extractionFrequencyDays?: number;
+
+  @IsOptional()
+  @IsNumber()
+  productiveYears?: number;
+
+  @IsOptional()
+  @IsNumber()
+  harvestsPerYear?: number;
 }

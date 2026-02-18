@@ -8,7 +8,7 @@ import {
   IsObject,
 } from 'class-validator';
 
-export class CreateSectorDto {
+export class CreateLotDto {
   @IsString()
   @IsNotEmpty()
   name: string;
@@ -46,11 +46,15 @@ export class CreateSectorDto {
   fieldId?: string;
 
   @IsOptional()
-  @IsString()
-  color?: string;
-
-  @IsOptional()
   @IsArray()
   @IsString({ each: true })
   facilityBuildingIds?: string[];
+
+  @IsOptional()
+  @IsString()
+  soilType?: string;
+
+  @IsOptional()
+  @IsString()
+  irrigationSystem?: string;
 }

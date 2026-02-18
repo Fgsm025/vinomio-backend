@@ -30,10 +30,6 @@ export class CreateCropCycleDto {
   @IsString()
   variety?: string;
 
-  @IsOptional()
-  @IsString()
-  fieldId?: string;
-
   @IsString()
   @IsNotEmpty()
   plotId: string;
@@ -86,6 +82,17 @@ export class CreateCropCycleDto {
 
   @IsOptional()
   manualAdjustments?: Record<string, unknown>;
+
+  @IsOptional()
+  stages?: any;
+
+  @IsOptional()
+  @IsString()
+  workflowOption?: string;
+
+  @IsOptional()
+  @IsString()
+  templateId?: string;
 
   @IsOptional()
   @IsString()

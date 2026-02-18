@@ -7,7 +7,7 @@ import {
   IsObject,
 } from 'class-validator';
 
-export class CreateProductionUnitDto {
+export class CreateFieldDto {
   @IsString()
   @IsNotEmpty()
   name: string;
@@ -19,14 +19,6 @@ export class CreateProductionUnitDto {
   @IsString()
   @IsNotEmpty()
   productionType: string;
-
-  @IsOptional()
-  @IsString()
-  cropCategory?: string;
-
-  @IsOptional()
-  @IsString()
-  specificVariety?: string;
 
   @IsOptional()
   @IsNumber()
@@ -70,7 +62,15 @@ export class CreateProductionUnitDto {
 
   @IsOptional()
   @IsString()
-  color?: string;
+  description?: string;
+
+  @IsOptional()
+  @IsString()
+  sigpacCode?: string;
+
+  @IsOptional()
+  @IsString()
+  cadastralReference?: string;
 
   @IsOptional()
   @IsObject()

@@ -120,7 +120,7 @@ export class CropCyclesService {
     };
     const cycle = await this.prisma.cropCycle.create({
       data: payload as never,
-      include: { crop: true, plot: true, field: true },
+      include: { crop: true, plot: { include: { field: true } } },
     });
     return enrichCycle(cycle);
   }
@@ -132,7 +132,7 @@ export class CropCyclesService {
     const list = await this.prisma.cropCycle.findMany({
       where,
       orderBy: { createdAt: 'desc' },
-      include: { crop: true, plot: true, field: true },
+      include: { crop: true, plot: { include: { field: true } } },
     });
     return list.map(enrichCycle);
   }
@@ -141,7 +141,7 @@ export class CropCyclesService {
     const list = await this.prisma.cropCycle.findMany({
       where: { plotId },
       orderBy: { createdAt: 'desc' },
-      include: { crop: true, plot: true, field: true },
+      include: { crop: true, plot: { include: { field: true } } },
     });
     return list.map(enrichCycle);
   }
@@ -149,7 +149,7 @@ export class CropCyclesService {
   async findOne(id: string) {
     const cropCycle = await this.prisma.cropCycle.findUnique({
       where: { id },
-      include: { crop: true, plot: true, field: true },
+      include: { crop: true, plot: { include: { field: true } } },
     });
     if (!cropCycle) {
       throw new NotFoundException(`CropCycle with id "${id}" not found`);
@@ -196,7 +196,7 @@ export class CropCyclesService {
     const cycle = await this.prisma.cropCycle.update({
       where: { id },
       data: data as never,
-      include: { crop: true, plot: true, field: true },
+      include: { crop: true, plot: { include: { field: true } } },
     });
     return enrichCycle(cycle);
   }

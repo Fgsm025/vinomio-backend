@@ -11,33 +11,38 @@ import {
   UseGuards,
   Patch,
 } from '@nestjs/common';
-import { ProductionUnitsService } from './production-units.service';
-import { CreateProductionUnitDto } from './dto/create-production-unit.dto';
-import { UpdateProductionUnitDto } from './dto/update-production-unit.dto';
-import { CreateSectorDto } from '../sectors/dto/create-sector.dto';
+import { FieldsService } from './fields.service';
+import { CreateFieldDto } from './dto/create-fields.dto';
+import { UpdateFieldDto } from './dto/update-fields.dto';
+import { CreateLotDto } from '../lots/dto/lots.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { CurrentUserPayload } from '../auth/decorators/current-user.decorator';
 
 @Controller('fields')
-export class ProductionUnitsController {
-  constructor(
-    private readonly productionUnitsService: ProductionUnitsService,
-  ) {}
+export class FieldsController {
+  constructor(private readonly fieldsService: FieldsService) {}
 
   @Post()
   @UseGuards(JwtAuthGuard)
   create(
-    @Body() dto: CreateProductionUnitDto & { geometry?: Record<string, unknown>; surface?: number },
+    @Body()
+    dto: CreateFieldDto & {
+      geometry?: Record<string, unknown>;
+      surface?: number;
+    },
     @CurrentUser() user: CurrentUserPayload,
   ) {
     if (!user.farmId && !user.needsOnboarding) {
       throw new Error('User must have a farm assigned or need onboarding');
     }
-    return this.productionUnitsService.create({
-      ...dto,
-      farmId: dto.farmId || user.farmId,
-    }, user.userId);
+    return this.fieldsService.create(
+      {
+        ...dto,
+        farmId: dto.farmId || user.farmId,
+      },
+      user.userId,
+    );
   }
 
   @Get()
@@ -51,9 +56,9 @@ export class ProductionUnitsController {
     }
     const targetFarmId = farmId || user.farmId;
     if (targetFarmId) {
-      return this.productionUnitsService.findByFarm(targetFarmId);
+      return this.fieldsService.findByFarm(targetFarmId);
     }
-    return this.productionUnitsService.findAll(user.userId);
+    return this.fieldsService.findAll(user.userId);
   }
 
   @Get(':id')
@@ -62,17 +67,17 @@ export class ProductionUnitsController {
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user: CurrentUserPayload,
   ) {
-    return this.productionUnitsService.findOne(id, user.userId);
+    return this.fieldsService.findOne(id, user.userId);
   }
 
   @Put(':id')
   @UseGuards(JwtAuthGuard)
   update(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: UpdateProductionUnitDto,
+    @Body() dto: UpdateFieldDto,
     @CurrentUser() user: CurrentUserPayload,
   ) {
-    return this.productionUnitsService.update(id, dto, user.userId);
+    return this.fieldsService.update(id, dto, user.userId);
   }
 
   @Delete(':id')
@@ -81,16 +86,22 @@ export class ProductionUnitsController {
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user: CurrentUserPayload,
   ) {
-    return this.productionUnitsService.remove(id, user.userId);
+    return this.fieldsService.remove(id, user.userId);
   }
 
   @Patch(':id/subdivide')
   @UseGuards(JwtAuthGuard)
   subdivide(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() body: { plots: CreateSectorDto[] },
+    @Body() body: { plots: CreateLotDto[] },
+    @Query('replaceAll') replaceAll: string | undefined,
     @CurrentUser() user: CurrentUserPayload,
   ) {
-    return this.productionUnitsService.subdivideField(id, body.plots, user.userId);
+    return this.fieldsService.subdivideField(
+      id,
+      body.plots,
+      user.userId,
+      replaceAll === 'true',
+    );
   }
 }
