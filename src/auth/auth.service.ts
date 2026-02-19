@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import { RegisterDto } from './dto/register.dto';
@@ -61,6 +61,68 @@ export class AuthService {
       avatar: user.avatar || null,
       hasCompletedOnboarding: user.hasCompletedOnboarding,
     };
+  }
+
+  async firebaseLogin(email: string, farmId?: string) {
+    const user = await this.usersService.findByEmail(email);
+    
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const userForLogin = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      avatar: user.avatar,
+      hasCompletedOnboarding: user.hasCompletedOnboarding,
+      farms: (user.farms || []).map((uf: any) => ({
+        farmId: uf.farmId,
+        role: uf.role,
+        farm: uf.farm,
+      })),
+    };
+
+    return this.login(userForLogin, farmId);
+  }
+
+  async registerFromFirebase(email: string, name?: string, avatar?: string) {
+    const user = await this.usersService.createFromFirebase(email, name, avatar);
+
+    const payload = {
+      email: user.email,
+      sub: user.id,
+      needsOnboarding: true,
+    };
+    const access_token = this.jwtService.sign(payload);
+
+    return {
+      access_token,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name || null,
+        avatar: user.avatar || null,
+        hasCompletedOnboarding: false,
+      },
+      needsOnboarding: true,
+    };
+  }
+
+  async updateAvatar(userId: string, avatar: string) {
+    const user = await this.usersService.updateAvatar(userId, avatar);
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      avatar: user.avatar,
+      hasCompletedOnboarding: user.hasCompletedOnboarding,
+    };
+  }
+
+  async deleteAccount(userId: string) {
+    await this.usersService.delete(userId);
+    return { message: 'Account deleted successfully' };
   }
 
   async login(user: any, farmId?: string) {

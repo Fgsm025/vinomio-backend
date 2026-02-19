@@ -6,7 +6,9 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCropCycleDto } from './dto/create-crop-cycle.dto';
+import { CreateMultipleCropCyclesDto } from './dto/create-multiple-crop-cycles.dto';
 import { UpdateCropCycleDto } from './dto/update-crop-cycle.dto';
+import { getFirstTaskFromWorkflow } from '../services/workflow-to-tasks';
 
 function totalPhenologyDays(crop: {
   plantingDays?: number | null;
@@ -75,16 +77,6 @@ export class CropCyclesService {
     if (!crop) {
       throw new NotFoundException(`Crop with id "${dto.cropId}" not found`);
     }
-    if (crop.cropSystem === 'monoculture') {
-      const existingActive = await this.prisma.cropCycle.findFirst({
-        where: { plotId: dto.plotId, status: 'active' },
-      });
-      if (existingActive) {
-        throw new ConflictException(
-          'An active cycle already exists in this plot for monoculture',
-        );
-      }
-    }
     const plantingDate = new Date(dto.plantingDate);
     let plantDensity = dto.plantDensity;
     if (
@@ -100,14 +92,30 @@ export class CropCyclesService {
     if (totalDays != null && totalDays > 0) {
       estimatedHarvestDate = addDays(plantingDate, totalDays);
     }
-    const payload = {
-      ...dto,
+    const payload: any = {
+      cropId: dto.cropId,
+      plotId: dto.plotId,
       season: dto.season ?? '',
       status: dto.status ?? 'active',
       plantingDate,
-      ...(plantDensity != null && { plantDensity }),
-      ...(estimatedHarvestDate && { estimatedHarvestDate }),
+      currentStatus: dto.currentStatus,
+      ...(dto.variety && { variety: dto.variety }),
+      ...(dto.region && { region: dto.region }),
       ...(dto.endDate && { endDate: new Date(dto.endDate) }),
+      ...(dto.endReason && { endReason: dto.endReason }),
+      ...(dto.plantedArea != null && { plantedArea: dto.plantedArea }),
+      ...(dto.plantCount != null && { plantCount: dto.plantCount }),
+      ...(plantDensity != null && { plantDensity }),
+      ...(dto.phenologyTemplateId && { phenologyTemplateId: dto.phenologyTemplateId }),
+      ...(dto.manualAdjustments && { manualAdjustments: dto.manualAdjustments }),
+      ...(dto.workflowOption && { workflowOption: dto.workflowOption }),
+      ...(dto.templateId && { templateId: dto.templateId }),
+      ...(dto.stages && { stages: dto.stages }),
+      ...(dto.notes && { notes: dto.notes }),
+      ...(dto.seedBatch && { seedBatch: dto.seedBatch }),
+      ...(dto.nurseryOrigin && { nurseryOrigin: dto.nurseryOrigin }),
+      ...(dto.supplier && { supplier: dto.supplier }),
+      ...(estimatedHarvestDate && { estimatedHarvestDate }),
       ...(dto.estimatedHarvestDate && {
         estimatedHarvestDate: new Date(dto.estimatedHarvestDate),
       }),
@@ -117,12 +125,107 @@ export class CropCyclesService {
       ...(dto.actualHarvestEndDate && {
         actualHarvestEndDate: new Date(dto.actualHarvestEndDate),
       }),
+      ...(dto.actualYield != null && { actualYield: dto.actualYield }),
+      ...(dto.yieldUnit && { yieldUnit: dto.yieldUnit }),
+      ...(dto.previousCropId && { previousCropId: dto.previousCropId }),
+      ...(dto.nextPlannedCropId && { nextPlannedCropId: dto.nextPlannedCropId }),
     };
     const cycle = await this.prisma.cropCycle.create({
       data: payload as never,
       include: { crop: true, plot: { include: { field: true } } },
     });
+
+    const farmId = cycle.plot?.field?.farmId;
+    if (farmId && dto.workflowOption === 'stages' && dto.stages?.length > 0) {
+      const cropName = cycle.crop?.product || cycle.crop?.nameOrDescription || '';
+      const plotName = cycle.plot?.name || '';
+
+      for (let i = 0; i < dto.stages.length; i++) {
+        const stage = dto.stages[i];
+        const workflowIds = [
+          ...(stage.workflowId ? [stage.workflowId] : []),
+          ...(stage.subWorkflowIds || []),
+        ];
+
+        for (const workflowId of workflowIds) {
+          const workflow = await this.prisma.workflow.findUnique({
+            where: { id: workflowId },
+          });
+
+          if (!workflow) {
+            console.warn(`Workflow ${workflowId} not found`);
+            continue;
+          }
+
+          const nodes = Array.isArray(workflow.nodes) ? (workflow.nodes as any[]) : [];
+          const edges = Array.isArray(workflow.edges) ? (workflow.edges as any[]) : [];
+
+          console.log(`Creating tasks for workflow ${workflowId}:`, {
+            nodesCount: nodes.length,
+            edgesCount: edges.length,
+            nodes: nodes.map((n) => ({ id: n.id, type: n.type })),
+          });
+
+          if (nodes.length === 0) {
+            console.warn(`Workflow ${workflowId} has no nodes`);
+            continue;
+          }
+
+          const firstTask = getFirstTaskFromWorkflow(
+            nodes,
+            edges,
+            cycle.id,
+            workflow.id,
+            workflow.name,
+            cropName,
+            plotName,
+            i,
+            farmId,
+          );
+
+          if (firstTask) {
+            console.log(`Creating first task:`, firstTask);
+            await this.prisma.task.create({ data: firstTask });
+          } else {
+            console.warn(`No first task found for workflow ${workflowId}`);
+          }
+        }
+      }
+    }
+
     return enrichCycle(cycle);
+  }
+
+  async createMultiple(dto: CreateMultipleCropCyclesDto) {
+    if (!dto.plotIds || dto.plotIds.length === 0) {
+      throw new BadRequestException('plotIds array is required and must not be empty');
+    }
+
+    const results: Awaited<ReturnType<typeof this.create>>[] = [];
+    const errors: Array<{ plotId: string; error: string }> = [];
+
+    for (const plotId of dto.plotIds) {
+      try {
+        const singleDto: CreateCropCycleDto = {
+          ...dto,
+          plotId,
+        } as CreateCropCycleDto;
+        const cycle = await this.create(singleDto);
+        results.push(cycle);
+      } catch (error) {
+        errors.push({
+          plotId,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    }
+
+    return {
+      created: results,
+      errors: errors.length > 0 ? errors : undefined,
+      total: results.length,
+      failed: errors.length,
+    };
   }
 
   async findAll(filters?: { plotId?: string; season?: string }) {

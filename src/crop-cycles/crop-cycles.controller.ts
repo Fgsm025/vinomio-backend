@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query, ParseUUIDPipe } from '@nestjs/common';
 import { CropCyclesService } from './crop-cycles.service';
 import { CreateCropCycleDto } from './dto/create-crop-cycle.dto';
+import { CreateMultipleCropCyclesDto } from './dto/create-multiple-crop-cycles.dto';
 import { UpdateCropCycleDto } from './dto/update-crop-cycle.dto';
 
 @Controller('crop-cycles')
@@ -8,8 +9,11 @@ export class CropCyclesController {
   constructor(private readonly cropCyclesService: CropCyclesService) {}
 
   @Post()
-  create(@Body() dto: CreateCropCycleDto) {
-    return this.cropCyclesService.create(dto);
+  create(@Body() dto: CreateCropCycleDto | CreateMultipleCropCyclesDto) {
+    if ('plotIds' in dto && Array.isArray(dto.plotIds) && dto.plotIds.length > 0) {
+      return this.cropCyclesService.createMultiple(dto as CreateMultipleCropCyclesDto);
+    }
+    return this.cropCyclesService.create(dto as CreateCropCycleDto);
   }
 
   @Get()

@@ -61,6 +61,34 @@ export class UsersService {
     });
   }
 
+  async createFromFirebase(email: string, name?: string, avatar?: string) {
+    const existingUser = await this.findByEmail(email);
+    if (existingUser) {
+      throw new ConflictException('User with this email already exists');
+    }
+
+    const randomPassword = await bcrypt.hash(Math.random().toString(36) + Date.now().toString(36), 10);
+
+    return this.prisma.user.create({
+      data: {
+        email,
+        password: randomPassword,
+        name,
+        avatar,
+        hasCompletedOnboarding: false,
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        avatar: true,
+        hasCompletedOnboarding: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+  }
+
   async getUserFarms(userId: string) {
     return this.prisma.userFarm.findMany({
       where: { userId },
@@ -83,6 +111,28 @@ export class UsersService {
         avatar: true,
         hasCompletedOnboarding: true,
       },
+    });
+  }
+
+  async updateAvatar(userId: string, avatar: string) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        avatar,
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        avatar: true,
+        hasCompletedOnboarding: true,
+      },
+    });
+  }
+
+  async delete(userId: string) {
+    return this.prisma.user.delete({
+      where: { id: userId },
     });
   }
 }

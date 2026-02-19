@@ -177,4 +177,9 @@ export class CreateCropDto {
   @IsOptional()
   @IsNumber()
   harvestsPerYear?: number;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  qualityRegimes?: string[];
 }

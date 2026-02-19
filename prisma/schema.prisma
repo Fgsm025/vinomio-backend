@@ -94,6 +94,7 @@ model Crop {
   ecologicalProductionCertificate String?  @map("ecological_production_certificate")
   cropDestination                 String?  @map("crop_destination")
   cropDestinations                String[] @default([]) @map("crop_destinations")
+  qualityRegimes                  String[] @default([]) @map("quality_regimes")
   soilCoverage                    String?  @map("soil_coverage")
   integratedProduction            Boolean  @default(false) @map("integrated_production")
   reproductionPlantMaterial       String?  @map("reproduction_plant_material")
@@ -234,6 +235,7 @@ model Farm {
   stockMovements      Stock[]
   purchases           Purchase[]
   workflows           Workflow[]
+  tasks               Task[]
 
   @@map("farms")
 }
@@ -590,4 +592,35 @@ model Workflow {
   farm Farm? @relation(fields: [farmId], references: [id], onDelete: Cascade)
 
   @@map("workflows")
+}
+
+model Task {
+  id                String    @id @default(uuid())
+  title              String
+  description        String?
+  status             String    @default("todo")
+  cropCycleId        String?   @map("crop_cycle_id")
+  workflowId         String?   @map("workflow_id")
+  workflowName       String?   @map("workflow_name")
+  cropCycleName      String?   @map("crop_cycle_name")
+  plotName           String?   @map("plot_name")
+  nodeId             String?   @map("node_id")
+  nodeType           String?   @map("node_type")
+  nodeData           Json?     @map("node_data")
+  conditionOptions   String[]  @default([]) @map("condition_options")
+  conditionAnswer    String?   @map("condition_answer")
+  nextNodeIdOnYes    String?   @map("next_node_id_on_yes")
+  nextNodeIdOnNo     String?   @map("next_node_id_on_no")
+  waitDays           Int?      @map("wait_days")
+  sourceType         String    @default("manual") @map("source_type")
+  stageIndex         Int?      @map("stage_index")
+  assignedTo         String?   @map("assigned_to")
+  dueDate            DateTime? @map("due_date")
+  farmId             String    @map("farm_id")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  farm Farm @relation(fields: [farmId], references: [id], onDelete: Cascade)
+
+  @@map("tasks")
 }

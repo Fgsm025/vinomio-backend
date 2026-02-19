@@ -138,4 +138,16 @@ export class CreateCropCycleDto {
   @IsOptional()
   @IsString()
   nextPlannedCropId?: string;
+
+  @IsOptional()
+  @IsString()
+  fieldId?: string;
+
+  @IsOptional()
+  @IsString()
+  productionUnitId?: string;
+
+  @IsOptional()
+  @IsString()
+  sectorId?: string;
 }

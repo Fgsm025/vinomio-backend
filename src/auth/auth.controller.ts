@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, UseGuards, Request } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -32,5 +32,27 @@ export class AuthController {
   @Post('complete-onboarding')
   async completeOnboarding(@CurrentUser() user: CurrentUserPayload) {
     return this.authService.completeOnboarding(user.userId);
+  }
+
+  @Post('firebase-login')
+  async firebaseLogin(@Body() body: { email: string; farmId?: string }) {
+    return this.authService.firebaseLogin(body.email, body.farmId);
+  }
+
+  @Post('firebase-register')
+  async firebaseRegister(@Body() body: { email: string; name?: string; avatar?: string }) {
+    return this.authService.registerFromFirebase(body.email, body.name, body.avatar);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Put('avatar')
+  async updateAvatar(@CurrentUser() user: CurrentUserPayload, @Body() body: { avatar: string }) {
+    return this.authService.updateAvatar(user.userId, body.avatar);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('account')
+  async deleteAccount(@CurrentUser() user: CurrentUserPayload) {
+    return this.authService.deleteAccount(user.userId);
   }
 }
