@@ -39,11 +39,10 @@ export class TasksService {
     return this.prisma.task.create({ data });
   }
 
-  async findAll(farmId: string, cropCycleId?: string) {
-    const where: any = { farmId };
-    if (cropCycleId) {
-      where.cropCycleId = cropCycleId;
-    }
+  async findAll(farmId: string, cropCycleId?: string, assignedTo?: string) {
+    const where: Prisma.TaskWhereInput = { farmId };
+    if (cropCycleId) where.cropCycleId = cropCycleId;
+    if (assignedTo) where.assignedTo = assignedTo;
     return this.prisma.task.findMany({
       where,
       orderBy: { createdAt: 'desc' },
@@ -117,12 +116,14 @@ export class TasksService {
   }
 
   async update(id: string, dto: UpdateTaskDto) {
-    const task = await this.findOne(id);
+    await this.findOne(id);
 
     const updateData: Prisma.TaskUpdateInput = {};
-    if (dto.status) {
-      updateData.status = dto.status;
-    }
+    if (dto.status !== undefined) updateData.status = dto.status;
+    if (dto.description !== undefined) updateData.description = dto.description;
+    if (dto.assignedTo !== undefined) updateData.assignedTo = dto.assignedTo;
+    if (dto.dueDate !== undefined) updateData.dueDate = new Date(dto.dueDate);
+    if (dto.nodeData !== undefined) updateData.nodeData = dto.nodeData as Prisma.InputJsonValue;
 
     return this.prisma.task.update({
       where: { id },

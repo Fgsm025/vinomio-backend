@@ -20,6 +20,7 @@ model User {
   password               String
   name                   String?
   avatar                 String?
+  googleId               String?  @unique @map("google_id")
   hasCompletedOnboarding Boolean  @default(false) @map("has_completed_onboarding")
   createdAt              DateTime @default(now()) @map("created_at")
   updatedAt              DateTime @updatedAt @map("updated_at")

@@ -9,11 +9,15 @@ export class TasksController {
   constructor(private readonly tasksService: TasksService) {}
 
   @Get()
-  findAll(@Query('farmId') farmId: string, @Query('cropCycleId') cropCycleId?: string) {
+  findAll(
+    @Query('farmId') farmId: string,
+    @Query('cropCycleId') cropCycleId?: string,
+    @Query('assignedTo') assignedTo?: string,
+  ) {
     if (!farmId) {
       throw new Error('farmId is required');
     }
-    return this.tasksService.findAll(farmId, cropCycleId);
+    return this.tasksService.findAll(farmId, cropCycleId, assignedTo);
   }
 
   @Post()

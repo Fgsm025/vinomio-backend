@@ -20,6 +20,7 @@ import { TraceabilityModule } from './traceability/traceability.module';
 import { PurchasesModule } from './purchases/purchases.module';
 import { InvitationsModule } from './invitations/invitations.module';
 import { WorkflowsModule } from './workflows/workflows.module';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { WorkflowsModule } from './workflows/workflows.module';
     PurchasesModule,
     InvitationsModule,
     WorkflowsModule,
+    UsersModule,
   ],
 })
 export class AppModule {}

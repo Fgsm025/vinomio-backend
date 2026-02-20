@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import { RegisterDto } from './dto/register.dto';
@@ -63,12 +63,8 @@ export class AuthService {
     };
   }
 
-  async firebaseLogin(email: string, farmId?: string) {
-    const user = await this.usersService.findByEmail(email);
-    
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
+  async firebaseLogin(email: string, name?: string, avatar?: string, googleId?: string, farmId?: string) {
+    const user = await this.usersService.upsertFromFirebase(email, name, avatar, googleId);
 
     const userForLogin = {
       id: user.id,
@@ -86,8 +82,8 @@ export class AuthService {
     return this.login(userForLogin, farmId);
   }
 
-  async registerFromFirebase(email: string, name?: string, avatar?: string) {
-    const user = await this.usersService.createFromFirebase(email, name, avatar);
+  async registerFromFirebase(email: string, name?: string, avatar?: string, googleId?: string) {
+    const user = await this.usersService.upsertFromFirebase(email, name, avatar, googleId);
 
     const payload = {
       email: user.email,

@@ -61,32 +61,43 @@ export class UsersService {
     });
   }
 
-  async createFromFirebase(email: string, name?: string, avatar?: string) {
-    const existingUser = await this.findByEmail(email);
-    if (existingUser) {
-      throw new ConflictException('User with this email already exists');
-    }
-
+  async upsertFromFirebase(email: string, name?: string, avatar?: string, googleId?: string) {
     const randomPassword = await bcrypt.hash(Math.random().toString(36) + Date.now().toString(36), 10);
 
-    return this.prisma.user.create({
-      data: {
+    const updateData: {
+      name?: string;
+      avatar?: string;
+      googleId?: string;
+    } = {};
+    if (name !== undefined) updateData.name = name;
+    if (avatar !== undefined) updateData.avatar = avatar;
+    if (googleId !== undefined) updateData.googleId = googleId;
+
+    return this.prisma.user.upsert({
+      where: {
+        email,
+      },
+      update: updateData,
+      create: {
         email,
         password: randomPassword,
         name,
         avatar,
+        googleId,
         hasCompletedOnboarding: false,
       },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        avatar: true,
-        hasCompletedOnboarding: true,
-        createdAt: true,
-        updatedAt: true,
+      include: {
+        farms: {
+          include: {
+            farm: true,
+          },
+        },
       },
     });
+  }
+
+  async createFromFirebase(email: string, name?: string, avatar?: string) {
+    return this.upsertFromFirebase(email, name, avatar);
   }
 
   async getUserFarms(userId: string) {
@@ -133,6 +144,23 @@ export class UsersService {
   async delete(userId: string) {
     return this.prisma.user.delete({
       where: { id: userId },
+    });
+  }
+
+  async findAll() {
+    return this.prisma.user.findMany({
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        avatar: true,
+        hasCompletedOnboarding: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
     });
   }
 }

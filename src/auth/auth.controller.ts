@@ -35,13 +35,13 @@ export class AuthController {
   }
 
   @Post('firebase-login')
-  async firebaseLogin(@Body() body: { email: string; farmId?: string }) {
-    return this.authService.firebaseLogin(body.email, body.farmId);
+  async firebaseLogin(@Body() body: { email: string; name?: string; avatar?: string; googleId?: string; farmId?: string }) {
+    return this.authService.firebaseLogin(body.email, body.name, body.avatar, body.googleId, body.farmId);
   }
 
   @Post('firebase-register')
-  async firebaseRegister(@Body() body: { email: string; name?: string; avatar?: string }) {
-    return this.authService.registerFromFirebase(body.email, body.name, body.avatar);
+  async firebaseRegister(@Body() body: { email: string; name?: string; avatar?: string; googleId?: string }) {
+    return this.authService.registerFromFirebase(body.email, body.name, body.avatar, body.googleId);
   }
 
   @UseGuards(JwtAuthGuard)

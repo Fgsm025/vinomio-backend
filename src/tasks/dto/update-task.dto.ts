@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsObject } from 'class-validator';
+import { IsString, IsOptional, IsObject, IsDateString } from 'class-validator';
 
 export class UpdateTaskDto {
   @IsOptional()
@@ -6,6 +6,22 @@ export class UpdateTaskDto {
   status?: string;
 
   @IsOptional()
+  @IsString()
+  description?: string | null;
+
+  @IsOptional()
+  @IsString()
+  assignedTo?: string;
+
+  @IsOptional()
+  @IsDateString()
+  dueDate?: string;
+
+  @IsOptional()
   @IsObject()
   completionData?: any;
+
+  @IsOptional()
+  @IsObject()
+  nodeData?: Record<string, unknown>;
 }
