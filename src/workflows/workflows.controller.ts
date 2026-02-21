@@ -23,8 +23,12 @@ export class WorkflowsController {
   }
 
   @Get()
-  findAll(@Query('farmId') farmId?: string) {
-    return this.workflowsService.findAll(farmId);
+  findAll(
+    @Query('farmId') farmId?: string,
+    @Query('isTemplate') isTemplateStr?: string,
+  ) {
+    const isTemplate = isTemplateStr === 'true' ? true : isTemplateStr === 'false' ? false : undefined;
+    return this.workflowsService.findAll(farmId, isTemplate);
   }
 
   @Get(':id')

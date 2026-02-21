@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateWorkflowDto } from './dto/create-workflow.dto';
 import { UpdateWorkflowDto } from './dto/update-workflow.dto';
@@ -20,9 +21,18 @@ export class WorkflowsService {
     });
   }
 
-  async findAll(farmId?: string) {
+  async findAll(farmId?: string, isTemplate?: boolean) {
+    let where: Prisma.WorkflowWhereInput | undefined;
+    if (isTemplate === true) {
+      where = {
+        isTemplate: true,
+        ...(farmId ? { OR: [{ farmId }, { farmId: null }] } : {}),
+      };
+    } else if (farmId) {
+      where = { OR: [{ farmId }, { isTemplate: true, farmId: null }] };
+    }
     return this.prisma.workflow.findMany({
-      where: farmId ? { farmId } : undefined,
+      where,
       orderBy: { createdAt: 'desc' },
     });
   }

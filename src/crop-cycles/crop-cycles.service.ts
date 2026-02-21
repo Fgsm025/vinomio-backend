@@ -136,10 +136,36 @@ export class CropCyclesService {
     });
 
     const farmId = cycle.plot?.field?.farmId;
-    if (farmId && dto.workflowOption === 'stages' && dto.stages?.length > 0) {
-      const cropName = cycle.crop?.product || cycle.crop?.nameOrDescription || '';
-      const plotName = cycle.plot?.name || '';
+    const cropName = cycle.crop?.product || cycle.crop?.nameOrDescription || '';
+    const plotName = cycle.plot?.name || '';
 
+    if (farmId && dto.workflowOption === 'template' && dto.templateId) {
+      const workflow = await this.prisma.workflow.findUnique({
+        where: { id: dto.templateId },
+      });
+      if (workflow) {
+        const nodes = Array.isArray(workflow.nodes) ? (workflow.nodes as any[]) : [];
+        const edges = Array.isArray(workflow.edges) ? (workflow.edges as any[]) : [];
+        if (nodes.length > 0) {
+          const firstTask = getFirstTaskFromWorkflow(
+            nodes,
+            edges,
+            cycle.id,
+            workflow.id,
+            workflow.name,
+            cropName,
+            plotName,
+            0,
+            farmId,
+          );
+          if (firstTask) {
+            await this.prisma.task.create({ data: firstTask });
+          }
+        }
+      }
+    }
+
+    if (farmId && dto.workflowOption === 'stages' && dto.stages?.length > 0) {
       for (let i = 0; i < dto.stages.length; i++) {
         const stage = dto.stages[i];
         const workflowIds = [
@@ -153,23 +179,13 @@ export class CropCyclesService {
           });
 
           if (!workflow) {
-            console.warn(`Workflow ${workflowId} not found`);
             continue;
           }
 
           const nodes = Array.isArray(workflow.nodes) ? (workflow.nodes as any[]) : [];
           const edges = Array.isArray(workflow.edges) ? (workflow.edges as any[]) : [];
 
-          console.log(`Creating tasks for workflow ${workflowId}:`, {
-            nodesCount: nodes.length,
-            edgesCount: edges.length,
-            nodes: nodes.map((n) => ({ id: n.id, type: n.type })),
-          });
-
-          if (nodes.length === 0) {
-            console.warn(`Workflow ${workflowId} has no nodes`);
-            continue;
-          }
+          if (nodes.length === 0) continue;
 
           const firstTask = getFirstTaskFromWorkflow(
             nodes,
@@ -184,10 +200,7 @@ export class CropCyclesService {
           );
 
           if (firstTask) {
-            console.log(`Creating first task:`, firstTask);
             await this.prisma.task.create({ data: firstTask });
-          } else {
-            console.warn(`No first task found for workflow ${workflowId}`);
           }
         }
       }

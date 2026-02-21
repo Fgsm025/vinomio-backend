@@ -308,6 +308,7 @@ model Field {
   irrigationSchedules IrrigationSchedule[]
   rainfallEvents      RainfallEvent[]
   traceabilityRecords TraceabilityRecord[]
+  grazingLocations    GrazingLocation[]
 
   @@map("fields")
 }
@@ -406,13 +407,15 @@ model GrazingLocation {
   entryDate         DateTime? @map("entry_date")
   daysInLocation    Int?      @map("days_in_location")
   animalDaysPerAcre Float?    @map("animal_days_per_acre")
-  plotId            String    @map("plot_id")
+  fieldId           String?   @map("field_id")
+  plotId            String?   @map("plot_id")
   color             String?
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
-  plot           Plot            @relation(fields: [plotId], references: [id], onDelete: Cascade)
-  livestockGroup LivestockGroup? @relation(fields: [livestockGroupId], references: [id], onDelete: SetNull)
+  field           Field?           @relation(fields: [fieldId], references: [id], onDelete: SetNull)
+  plot            Plot?            @relation(fields: [plotId], references: [id], onDelete: SetNull)
+  livestockGroup  LivestockGroup?   @relation(fields: [livestockGroupId], references: [id], onDelete: SetNull)
 
   @@map("grazing_locations")
 }

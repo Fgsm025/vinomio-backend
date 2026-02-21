@@ -38,7 +38,11 @@ export class CreateGrazingLocationDto {
 
   @IsString()
   @IsNotEmpty()
-  plotId: string;
+  fieldId: string;
+
+  @IsOptional()
+  @IsString()
+  plotId?: string;
 
   @IsOptional()
   @IsString()
