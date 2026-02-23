@@ -1,14 +1,16 @@
 import {
   Injectable,
   NotFoundException,
-  ConflictException,
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCropCycleDto } from './dto/create-crop-cycle.dto';
 import { CreateMultipleCropCyclesDto } from './dto/create-multiple-crop-cycles.dto';
 import { UpdateCropCycleDto } from './dto/update-crop-cycle.dto';
-import { getFirstTaskFromWorkflow } from '../services/workflow-to-tasks';
+import {
+  getAllTasksFromWorkflowTemplate,
+  getFirstTaskFromWorkflow,
+} from '../services/workflow-to-tasks';
 
 function totalPhenologyDays(crop: {
   plantingDays?: number | null;
@@ -31,12 +33,19 @@ function addDays(date: Date, days: number): Date {
   return out;
 }
 
-function enrichCycle(cycle: {
-  plantingDate: Date;
-  estimatedHarvestDate?: Date | null;
-  status: string;
-  [key: string]: unknown;
-}) {
+function enrichCycle<
+  T extends {
+    plantingDate: Date;
+    estimatedHarvestDate?: Date | null;
+    status: string;
+  },
+>(
+  cycle: T,
+): T & {
+  daysToHarvest: number | null;
+  progressPercentage: number | null;
+  isDelayed: boolean;
+} {
   const now = new Date();
   const estimated =
     cycle.estimatedHarvestDate instanceof Date
@@ -72,6 +81,75 @@ function enrichCycle(cycle: {
 export class CropCyclesService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private async resolveWorkflowName(cycle: {
+    templateId?: string | null;
+    workflowOption?: string | null;
+    stages?: unknown;
+  }): Promise<string | null> {
+    if (cycle.templateId) {
+      const w = await this.prisma.workflow.findUnique({
+        where: { id: cycle.templateId },
+        select: { name: true },
+      });
+      return w?.name ?? null;
+    }
+    const stagesArr = Array.isArray(cycle.stages) ? cycle.stages : null;
+    if (cycle.workflowOption === 'stages' && stagesArr) {
+      const firstWithWorkflow = stagesArr.find(
+        (s: { workflowId?: string | null }) =>
+          s?.workflowId != null && String(s.workflowId).trim() !== '',
+      ) as { workflowId?: string | null } | undefined;
+      if (firstWithWorkflow?.workflowId) {
+        const w = await this.prisma.workflow.findUnique({
+          where: { id: firstWithWorkflow.workflowId },
+          select: { name: true },
+        });
+        return w?.name ?? null;
+      }
+    }
+    return null;
+  }
+
+  private async addWorkflowTemplateName<T extends Record<string, unknown>>(
+    cycle: T
+  ): Promise<T & { workflowTemplateName?: string | null }> {
+    const existing =
+      typeof cycle.workflowTemplateName === 'string' && cycle.workflowTemplateName !== ''
+        ? cycle.workflowTemplateName
+        : null;
+    if (existing != null) {
+      return { ...cycle, workflowTemplateName: existing };
+    }
+    const name = await this.resolveWorkflowName({
+      templateId: cycle.templateId as string | null | undefined,
+      workflowOption: cycle.workflowOption as string | null | undefined,
+      stages: cycle.stages,
+    });
+    return { ...cycle, workflowTemplateName: name };
+  }
+
+  private async enrichStagesWithWorkflowNames<T extends { stages?: unknown }>(
+    cycle: T
+  ): Promise<T> {
+    const stagesArr = Array.isArray(cycle.stages) ? cycle.stages : null;
+    if (!stagesArr || stagesArr.length === 0) return cycle;
+    const workflowIds = stagesArr
+      .map((s: { workflowId?: string | null }) => s?.workflowId)
+      .filter((id): id is string => id != null && String(id).trim() !== '');
+    if (workflowIds.length === 0) return cycle;
+    const workflows = await this.prisma.workflow.findMany({
+      where: { id: { in: workflowIds } },
+      select: { id: true, name: true },
+    });
+    const nameById = new Map(workflows.map((w) => [w.id, w.name]));
+    const enrichedStages = stagesArr.map((s: Record<string, unknown>) => {
+      const wid = s.workflowId as string | undefined;
+      const workflowName = wid ? nameById.get(wid) ?? null : null;
+      return { ...s, workflowName };
+    });
+    return { ...cycle, stages: enrichedStages };
+  }
+
   async create(dto: CreateCropCycleDto) {
     const crop = await this.prisma.crop.findUnique({ where: { id: dto.cropId } });
     if (!crop) {
@@ -99,6 +177,7 @@ export class CropCyclesService {
       status: dto.status ?? 'active',
       plantingDate,
       currentStatus: dto.currentStatus,
+      ...(dto.name && { name: dto.name }),
       ...(dto.variety && { variety: dto.variety }),
       ...(dto.region && { region: dto.region }),
       ...(dto.endDate && { endDate: new Date(dto.endDate) }),
@@ -130,10 +209,19 @@ export class CropCyclesService {
       ...(dto.previousCropId && { previousCropId: dto.previousCropId }),
       ...(dto.nextPlannedCropId && { nextPlannedCropId: dto.nextPlannedCropId }),
     };
-    const cycle = await this.prisma.cropCycle.create({
+    let cycle = await this.prisma.cropCycle.create({
       data: payload as never,
       include: { crop: true, plot: { include: { field: true } } },
     });
+
+    const workflowName = await this.resolveWorkflowName(cycle);
+    if (workflowName != null) {
+      await this.prisma.cropCycle.update({
+        where: { id: cycle.id },
+        data: { workflowTemplateName: workflowName },
+      });
+      cycle = { ...cycle, workflowTemplateName: workflowName };
+    }
 
     const farmId = cycle.plot?.field?.farmId;
     const cropName = cycle.crop?.product || cycle.crop?.nameOrDescription || '';
@@ -147,7 +235,7 @@ export class CropCyclesService {
         const nodes = Array.isArray(workflow.nodes) ? (workflow.nodes as any[]) : [];
         const edges = Array.isArray(workflow.edges) ? (workflow.edges as any[]) : [];
         if (nodes.length > 0) {
-          const firstTask = getFirstTaskFromWorkflow(
+          const tasksToCreate = getAllTasksFromWorkflowTemplate(
             nodes,
             edges,
             cycle.id,
@@ -158,8 +246,8 @@ export class CropCyclesService {
             0,
             farmId,
           );
-          if (firstTask) {
-            await this.prisma.task.create({ data: firstTask });
+          for (const taskPayload of tasksToCreate) {
+            await this.prisma.task.create({ data: taskPayload });
           }
         }
       }
@@ -206,7 +294,9 @@ export class CropCyclesService {
       }
     }
 
-    return enrichCycle(cycle);
+    const enriched = enrichCycle(cycle);
+    const withName = await this.addWorkflowTemplateName(enriched);
+    return this.enrichStagesWithWorkflowNames(withName);
   }
 
   async createMultiple(dto: CreateMultipleCropCyclesDto) {
@@ -248,29 +338,53 @@ export class CropCyclesService {
     const list = await this.prisma.cropCycle.findMany({
       where,
       orderBy: { createdAt: 'desc' },
-      include: { crop: true, plot: { include: { field: true } } },
+      include: {
+        crop: true,
+        plot: { include: { field: true } },
+        tasks: { orderBy: { createdAt: 'asc' } },
+      },
     });
-    return list.map(enrichCycle);
+    const enriched = list.map(enrichCycle);
+    return Promise.all(
+      enriched.map((c) =>
+        this.addWorkflowTemplateName(c).then((cy) => this.enrichStagesWithWorkflowNames(cy))
+      )
+    );
   }
 
   async findByPlot(plotId: string) {
     const list = await this.prisma.cropCycle.findMany({
       where: { plotId },
       orderBy: { createdAt: 'desc' },
-      include: { crop: true, plot: { include: { field: true } } },
+      include: {
+        crop: true,
+        plot: { include: { field: true } },
+        tasks: { orderBy: { createdAt: 'asc' } },
+      },
     });
-    return list.map(enrichCycle);
+    const enriched = list.map(enrichCycle);
+    return Promise.all(
+      enriched.map((c) =>
+        this.addWorkflowTemplateName(c).then((cy) => this.enrichStagesWithWorkflowNames(cy))
+      )
+    );
   }
 
   async findOne(id: string) {
     const cropCycle = await this.prisma.cropCycle.findUnique({
       where: { id },
-      include: { crop: true, plot: { include: { field: true } } },
+      include: {
+        crop: true,
+        plot: { include: { field: true } },
+        tasks: { orderBy: { createdAt: 'asc' } },
+      },
     });
     if (!cropCycle) {
       throw new NotFoundException(`CropCycle with id "${id}" not found`);
     }
-    return enrichCycle(cropCycle);
+    const enriched = enrichCycle(cropCycle);
+    const withName = await this.addWorkflowTemplateName(enriched);
+    return this.enrichStagesWithWorkflowNames(withName);
   }
 
   async update(id: string, dto: UpdateCropCycleDto) {
@@ -309,12 +423,27 @@ export class CropCyclesService {
         'Closing the cycle requires actualHarvestEndDate or endDate',
       );
     }
+    if (
+      dto.templateId !== undefined ||
+      dto.stages !== undefined ||
+      dto.workflowOption !== undefined
+    ) {
+      const workflowName = await this.resolveWorkflowName({
+        templateId: (dto.templateId ?? existing.templateId) as string | null,
+        workflowOption: (dto.workflowOption ?? existing.workflowOption) as string | null,
+        stages: (dto.stages ?? existing.stages) as Array<{ workflowId?: string | null }> | null,
+      });
+      data.workflowTemplateName = workflowName ?? null;
+    }
+
     const cycle = await this.prisma.cropCycle.update({
       where: { id },
       data: data as never,
       include: { crop: true, plot: { include: { field: true } } },
     });
-    return enrichCycle(cycle);
+    const enriched = enrichCycle(cycle);
+    const withName = await this.addWorkflowTemplateName(enriched);
+    return this.enrichStagesWithWorkflowNames(withName);
   }
 
   async remove(id: string) {

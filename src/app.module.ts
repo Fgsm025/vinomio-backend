@@ -7,6 +7,7 @@ import { MachineryModule } from './machinery/machinery.module';
 import { CropsModule } from './crops/crops.module';
 import { AnimalsModule } from './animals/animals.module';
 import { WaterSourcesModule } from './water-sources/water-sources.module';
+import { WaterConsumptionModule } from './water-consumption/water-consumption.module';
 import { ExploitationsModule } from './exploitations/exploitations.module';
 import { FieldsModule } from './fields/fields.module';
 import { LotsModule } from './lots/lots.module';
@@ -32,6 +33,7 @@ import { UsersModule } from './users/users.module';
     CropsModule,
     AnimalsModule,
     WaterSourcesModule,
+    WaterConsumptionModule,
     ExploitationsModule,
     FieldsModule,
     LotsModule,

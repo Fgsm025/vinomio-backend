@@ -71,8 +71,4 @@ export class CreateMachineryDto {
   @IsOptional()
   @IsNumber()
   currentValue?: number;
-
-  @IsOptional()
-  @IsString()
-  fieldId?: string;
 }

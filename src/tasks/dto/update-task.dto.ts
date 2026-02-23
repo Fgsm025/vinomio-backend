@@ -24,4 +24,8 @@ export class UpdateTaskDto {
   @IsOptional()
   @IsObject()
   nodeData?: Record<string, unknown>;
+
+  @IsOptional()
+  @IsString()
+  priority?: string | null;
 }

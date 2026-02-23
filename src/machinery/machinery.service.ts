@@ -16,20 +16,6 @@ export class MachineryService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(dto: CreateMachineryDto, farmId: string) {
-    if (dto.fieldId) {
-      const field = await this.prisma.field.findFirst({
-        where: {
-          id: dto.fieldId,
-          farmId,
-        },
-      });
-      if (!field) {
-        throw new NotFoundException(
-          `Field with id "${dto.fieldId}" not found in your farm`,
-        );
-      }
-    }
-
     const { model, acquisitionDate, ...rest } = dto;
     const created = await this.prisma.machinery.create({
       data: {
@@ -48,12 +34,7 @@ export class MachineryService {
 
   async findAll(farmId: string) {
     const machinery = await this.prisma.machinery.findMany({
-      where: {
-        OR: [
-          { farmId },
-          { field: { farmId } },
-        ],
-      },
+      where: { farmId },
       orderBy: { createdAt: 'desc' },
     });
     return machinery.map(({ modelName, ...rest }) => ({
@@ -64,13 +45,7 @@ export class MachineryService {
 
   async findOne(id: string, farmId: string) {
     const machinery = await this.prisma.machinery.findFirst({
-      where: {
-        id,
-        OR: [
-          { farmId },
-          { field: { farmId } },
-        ],
-      },
+      where: { id, farmId },
     });
     if (!machinery) {
       throw new NotFoundException(`Machinery with id "${id}" not found`);
@@ -84,20 +59,6 @@ export class MachineryService {
 
   async update(id: string, dto: UpdateMachineryDto, farmId: string) {
     await this.findOne(id, farmId);
-
-    if (dto.fieldId) {
-      const field = await this.prisma.field.findFirst({
-        where: {
-          id: dto.fieldId,
-          farmId,
-        },
-      });
-      if (!field) {
-        throw new NotFoundException(
-          `Field with id "${dto.fieldId}" not found in your farm`,
-        );
-      }
-    }
 
     const { model, acquisitionDate, ...rest } = dto;
     const updated = await this.prisma.machinery.update({

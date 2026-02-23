@@ -45,12 +45,10 @@ model Facility {
   longitude          Float?
   tenureRegime       String?  @map("tenure_regime")
   fieldId            String?  @map("field_id")
-  plotId             String?  @map("plot_id")
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
 
   field Field? @relation(fields: [fieldId], references: [id], onDelete: SetNull)
-  plot  Plot?  @relation(fields: [plotId], references: [id], onDelete: SetNull)
 
   @@map("facilities")
 }
@@ -74,12 +72,10 @@ model Machinery {
   purchasePrice       Float?    @map("purchase_price")
   currentValue        Float?    @map("current_value")
   farmId              String?   @map("farm_id")
-  fieldId             String?   @map("field_id")
   createdAt           DateTime  @default(now()) @map("created_at")
   updatedAt           DateTime  @updatedAt @map("updated_at")
 
-  farm  Farm?  @relation(fields: [farmId], references: [id], onDelete: SetNull)
-  field Field? @relation(fields: [fieldId], references: [id], onDelete: SetNull)
+  farm Farm? @relation(fields: [farmId], references: [id], onDelete: SetNull)
 
   @@map("machinery")
 }
@@ -190,6 +186,21 @@ model WaterSource {
   @@map("water_sources")
 }
 
+model WaterConsumption {
+  id           String   @id @default(uuid())
+  farmId       String   @map("farm_id")
+  source       String
+  isPotable    Boolean  @map("is_potable")
+  analysisDate DateTime @db.Date @map("analysis_date")
+  fileUrl      String?  @map("file_url")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  farm Farm @relation(fields: [farmId], references: [id], onDelete: Cascade)
+
+  @@map("water_consumptions")
+}
+
 model Farm {
   id        String   @id @default(uuid())
   name      String
@@ -237,6 +248,7 @@ model Farm {
   purchases           Purchase[]
   workflows           Workflow[]
   tasks               Task[]
+  waterConsumptions   WaterConsumption[]
 
   @@map("farms")
 }
@@ -298,12 +310,11 @@ model Field {
   createdAt                DateTime @default(now()) @map("created_at")
   updatedAt                DateTime @updatedAt @map("updated_at")
 
-  farm                Farm?                @relation(fields: [farmId], references: [id], onDelete: SetNull)
-  plots               Plot[]
-  facilities          Facility[]
-  machinery           Machinery[]
-  animals             Animal[]
-  waterSources        WaterSource[]
+  farm         Farm?         @relation(fields: [farmId], references: [id], onDelete: SetNull)
+  plots        Plot[]
+  facilities   Facility[]
+  animals      Animal[]
+  waterSources WaterSource[]
   livestockGroups     LivestockGroup[]
   irrigationSchedules IrrigationSchedule[]
   rainfallEvents      RainfallEvent[]
@@ -331,10 +342,9 @@ model Plot {
   createdAt                DateTime @default(now()) @map("created_at")
   updatedAt                DateTime @updatedAt @map("updated_at")
 
-  field                     Field                     @relation(fields: [fieldId], references: [id], onDelete: Cascade)
-  facilities                Facility[]
-  cropCycles                CropCycle[]
-  grazingLocations          GrazingLocation[]
+  field              Field             @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+  cropCycles         CropCycle[]
+  grazingLocations   GrazingLocation[]
   plotsOnIrrigationSchedule PlotOnIrrigationSchedule[]
   rainfallEvents            RainfallEvent[]
   traceabilityRecords       TraceabilityRecord[]
@@ -344,6 +354,7 @@ model Plot {
 
 model CropCycle {
   id                     String    @id @default(uuid())
+  name                   String?   @map("name")
   cropId                 String    @map("crop_id")
   variety                String?
   plotId                 String    @map("plot_id")
@@ -362,6 +373,7 @@ model CropCycle {
   stages                 Json?     @map("stages")
   workflowOption         String?   @map("workflow_option")
   templateId             String?   @map("template_id")
+  workflowTemplateName   String?   @map("workflow_template_name")
   notes                  String?
   seedBatch              String?   @map("seed_batch")
   nurseryOrigin          String?   @map("nursery_origin")
@@ -376,8 +388,9 @@ model CropCycle {
   createdAt              DateTime  @default(now()) @map("created_at")
   updatedAt              DateTime  @updatedAt @map("updated_at")
 
-  crop Crop @relation(fields: [cropId], references: [id])
-  plot Plot @relation(fields: [plotId], references: [id], onDelete: Cascade)
+  crop  Crop   @relation(fields: [cropId], references: [id], onDelete: Cascade)
+  plot  Plot   @relation(fields: [plotId], references: [id], onDelete: Cascade)
+  tasks Task[]
 
   @@map("crop_cycles")
 }
@@ -593,7 +606,8 @@ model Workflow {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  farm Farm? @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  farm  Farm?  @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  tasks Task[]
 
   @@map("workflows")
 }
@@ -620,11 +634,14 @@ model Task {
   stageIndex         Int?      @map("stage_index")
   assignedTo         String?   @map("assigned_to")
   dueDate            DateTime? @map("due_date")
+  priority           String?   @map("priority")
   farmId             String    @map("farm_id")
   createdAt          DateTime  @default(now()) @map("created_at")
   updatedAt          DateTime  @updatedAt @map("updated_at")
 
-  farm Farm @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  farm      Farm       @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  cropCycle CropCycle? @relation(fields: [cropCycleId], references: [id], onDelete: SetNull)
+  workflow  Workflow?  @relation(fields: [workflowId], references: [id], onDelete: SetNull)
 
   @@map("tasks")
 }

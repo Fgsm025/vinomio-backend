@@ -7,21 +7,22 @@ import {
   IsIn,
 } from 'class-validator';
 
-const GROWTH_STAGES = [
-  'planting',
-  'germination',
-  'vegetative',
-  'flowering',
-  'fruiting',
-  'maturation',
-  'harvest-ready',
-  'post-harvest',
-  'dormant',
+const PRODUCTION_CYCLE_STAGES = [
+  'PREPARATION',
+  'ESTABLISHMENT',
+  'VEGETATIVE',
+  'MATURATION',
+  'HARVEST',
+  'POST_HARVEST',
 ] as const;
 
 const CYCLE_STATUSES = ['active', 'completed', 'failed', 'archived'] as const;
 
 export class CreateCropCycleDto {
+  @IsOptional()
+  @IsString()
+  name?: string;
+
   @IsString()
   @IsNotEmpty()
   cropId: string;
@@ -73,7 +74,7 @@ export class CreateCropCycleDto {
 
   @IsString()
   @IsNotEmpty()
-  @IsIn(GROWTH_STAGES)
+  @IsIn(PRODUCTION_CYCLE_STAGES)
   currentStatus: string;
 
   @IsOptional()

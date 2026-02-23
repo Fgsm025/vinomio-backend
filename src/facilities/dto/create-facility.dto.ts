@@ -53,8 +53,4 @@ export class CreateFacilityDto {
   @IsOptional()
   @IsString()
   fieldId?: string;
-
-  @IsOptional()
-  @IsString()
-  plotId?: string;
 }

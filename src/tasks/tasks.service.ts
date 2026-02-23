@@ -4,7 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { CompleteTaskDto } from './dto/complete-task.dto';
-import { getNextTask } from '../services/workflow-to-tasks';
+import { getNextTask, getConditionOptionsForNode } from '../services/workflow-to-tasks';
 
 @Injectable()
 export class TasksService {
@@ -43,9 +43,40 @@ export class TasksService {
     const where: Prisma.TaskWhereInput = { farmId };
     if (cropCycleId) where.cropCycleId = cropCycleId;
     if (assignedTo) where.assignedTo = assignedTo;
-    return this.prisma.task.findMany({
+    const tasks = await this.prisma.task.findMany({
       where,
       orderBy: { createdAt: 'desc' },
+    });
+    const needEnrich = tasks.filter(
+      (t) =>
+        t.sourceType === 'workflow_node' &&
+        t.workflowId &&
+        t.nodeId &&
+        (!t.conditionOptions || t.conditionOptions.length === 0) &&
+        t.status !== 'done'
+    );
+    if (needEnrich.length === 0) return tasks;
+    const workflowIds = [...new Set(needEnrich.map((t) => t.workflowId!).filter(Boolean))];
+    const workflows = await this.prisma.workflow.findMany({
+      where: { id: { in: workflowIds } },
+    });
+    const workflowMap = new Map(workflows.map((w) => [w.id, w]));
+    return tasks.map((task) => {
+      if (
+        task.sourceType !== 'workflow_node' ||
+        !task.workflowId ||
+        !task.nodeId ||
+        (task.conditionOptions && task.conditionOptions.length > 0)
+      ) {
+        return task;
+      }
+      const w = workflowMap.get(task.workflowId);
+      if (!w) return task;
+      const nodes = (w.nodes as any[]) || [];
+      const edges = (w.edges as any[]) || [];
+      const options = getConditionOptionsForNode(task.nodeId, nodes, edges);
+      if (options.length === 0) return task;
+      return { ...task, conditionOptions: options };
     });
   }
 
@@ -55,6 +86,23 @@ export class TasksService {
     });
     if (!task) {
       throw new NotFoundException(`Task with id "${id}" not found`);
+    }
+    if (
+      task.sourceType === 'workflow_node' &&
+      task.workflowId &&
+      task.nodeId &&
+      (!task.conditionOptions || task.conditionOptions.length === 0) &&
+      task.status !== 'done'
+    ) {
+      const w = await this.prisma.workflow.findUnique({
+        where: { id: task.workflowId },
+      });
+      if (w) {
+        const nodes = (w.nodes as any[]) || [];
+        const edges = (w.edges as any[]) || [];
+        const options = getConditionOptionsForNode(task.nodeId, nodes, edges);
+        if (options.length > 0) return { ...task, conditionOptions: options };
+      }
     }
     return task;
   }
@@ -124,6 +172,7 @@ export class TasksService {
     if (dto.assignedTo !== undefined) updateData.assignedTo = dto.assignedTo;
     if (dto.dueDate !== undefined) updateData.dueDate = new Date(dto.dueDate);
     if (dto.nodeData !== undefined) updateData.nodeData = dto.nodeData as Prisma.InputJsonValue;
+    if (dto.priority !== undefined) updateData.priority = dto.priority;
 
     return this.prisma.task.update({
       where: { id },
