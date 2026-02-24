@@ -1,4 +1,5 @@
 import { Injectable, ConflictException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 
@@ -73,27 +74,51 @@ export class UsersService {
     if (avatar !== undefined) updateData.avatar = avatar;
     if (googleId !== undefined) updateData.googleId = googleId;
 
-    return this.prisma.user.upsert({
-      where: {
-        email,
-      },
-      update: updateData,
-      create: {
-        email,
-        password: randomPassword,
-        name,
-        avatar,
-        googleId,
-        hasCompletedOnboarding: false,
-      },
-      include: {
-        farms: {
-          include: {
-            farm: true,
-          },
+    const includeFarms = {
+      farms: {
+        include: {
+          farm: true,
         },
       },
-    });
+    };
+
+    try {
+      return await this.prisma.user.upsert({
+        where: { email },
+        update: updateData,
+        create: {
+          email,
+          password: randomPassword,
+          name,
+          avatar,
+          googleId,
+          hasCompletedOnboarding: false,
+        },
+        include: includeFarms,
+      });
+    } catch (error) {
+      const isEmailConflict =
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002' &&
+        (() => {
+          const target = error.meta?.target as string[] | undefined;
+          const fields = (error.meta as any)?.driverAdapterError?.cause?.constraint?.fields as string[] | undefined;
+          return (Array.isArray(target) && target.includes('email')) || (Array.isArray(fields) && fields.includes('email'));
+        })();
+      if (isEmailConflict) {
+        const existing = await this.prisma.user.findUnique({
+          where: { email },
+          include: includeFarms,
+        });
+        if (!existing) throw error;
+        return this.prisma.user.update({
+          where: { email },
+          data: updateData,
+          include: includeFarms,
+        });
+      }
+      throw error;
+    }
   }
 
   async createFromFirebase(email: string, name?: string, avatar?: string) {
