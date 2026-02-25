@@ -18,6 +18,13 @@ export function getConditionOptionsForNode(
   return [];
 }
 
+function convertWaitDurationToDays(duration: number, unit: string): number {
+  if (unit === 'days') return duration;
+  if (unit === 'weeks') return duration * 7;
+  if (unit === 'months') return duration * 30;
+  return duration;
+}
+
 function nodeToTaskPayload(
   node: any,
   workflowNodes: any[],
@@ -34,6 +41,10 @@ function nodeToTaskPayload(
     node.type === 'task' || node.type === 'wait'
       ? getConditionOptionsForNode(node.id, workflowNodes, workflowEdges)
       : [];
+  
+  const waitDays = node.type === 'wait' ? convertWaitDurationToDays(node.data?.duration || 1, node.data?.unit || 'days') : undefined;
+  const dueDate = waitDays ? new Date(Date.now() + waitDays * 24 * 60 * 60 * 1000).toISOString() : undefined;
+  
   return {
     title: node.data?.label || node.data?.title || 'Task',
     description: node.data?.description || '',
@@ -49,6 +60,8 @@ function nodeToTaskPayload(
     nodeType: node.type,
     nodeData: node.data,
     conditionOptions: conditionOptions.length > 0 ? conditionOptions : (node.data?.options || []),
+    waitDays,
+    dueDate,
     farmId,
   };
 }

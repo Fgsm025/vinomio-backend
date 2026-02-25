@@ -27,7 +27,6 @@ export class LotsService {
         isPasturesCommonInCommon: dto.isPasturesCommonInCommon,
         tenureRegime: dto.tenureRegime,
         fieldId: dto.fieldId,
-        facilityBuildingIds: dto.facilityBuildingIds,
       },
     });
   }
@@ -80,8 +79,6 @@ export class LotsService {
       }
       updateData.field = { connect: { id: dto.fieldId } };
     }
-    if (dto.facilityBuildingIds !== undefined)
-      updateData.facilityBuildingIds = dto.facilityBuildingIds;
 
     return this.prisma.plot.update({
       where: { id },

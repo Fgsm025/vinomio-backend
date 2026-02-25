@@ -44,4 +44,12 @@ export class TasksController {
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.tasksService.remove(id);
   }
+
+  @Post('check-ready')
+  checkAndTriggerReadyTasks(@Body('farmId') farmId: string) {
+    if (!farmId) {
+      throw new Error('farmId is required');
+    }
+    return this.tasksService.checkAndTriggerReadyTasks(farmId);
+  }
 }

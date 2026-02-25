@@ -5,6 +5,7 @@ import {
   IsNotEmpty,
   IsBoolean,
   IsObject,
+  IsArray,
 } from 'class-validator';
 
 export class CreateFieldDto {
@@ -79,4 +80,9 @@ export class CreateFieldDto {
   @IsOptional()
   @IsNumber()
   surface?: number;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  facilityBuildingIds?: string[];
 }

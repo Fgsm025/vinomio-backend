@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { ActivitiesService } from '../activities/activities.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { CompleteTaskDto } from './dto/complete-task.dto';
@@ -8,7 +9,10 @@ import { getNextTask, getConditionOptionsForNode } from '../services/workflow-to
 
 @Injectable()
 export class TasksService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly activitiesService: ActivitiesService,
+  ) {}
 
   async create(dto: CreateTaskDto) {
     const data: any = {
@@ -41,7 +45,14 @@ export class TasksService {
 
   async findAll(farmId: string, cropCycleId?: string, assignedTo?: string) {
     const where: Prisma.TaskWhereInput = { farmId };
-    if (cropCycleId) where.cropCycleId = cropCycleId;
+    if (cropCycleId) {
+      const ids = cropCycleId.split(',').map((id) => id.trim()).filter(Boolean);
+      if (ids.length === 1) {
+        where.cropCycleId = ids[0];
+      } else if (ids.length > 1) {
+        where.cropCycleId = { in: ids };
+      }
+    }
     if (assignedTo) where.assignedTo = assignedTo;
     const tasks = await this.prisma.task.findMany({
       where,
@@ -153,9 +164,43 @@ export class TasksService {
 
         if (nextTaskData) {
           nextTask = await this.prisma.task.create({ data: nextTaskData });
+          
+          if (nextTask.nodeType === 'wait') {
+            const nodeData = nextTask.nodeData as { duration?: number; unit?: string } | null;
+            const waitDuration = nodeData?.duration ?? 1;
+            const waitUnit = nodeData?.unit ?? 'weeks';
+            let waitDays = waitDuration;
+            if (waitUnit === 'weeks') waitDays = waitDuration * 7;
+            else if (waitUnit === 'months') waitDays = waitDuration * 30;
+            
+            // Set the due date for the wait node
+            await this.prisma.task.update({
+              where: { id: nextTask.id },
+              data: {
+                dueDate: new Date(Date.now() + waitDays * 24 * 60 * 60 * 1000),
+              },
+            });
+            
+            // TODO: In a production system, we would use a background job scheduler here
+            // For now, the UI should check for tasks past their dueDate and auto-trigger them
+          }
         }
       }
     }
+    
+    this.activitiesService.log({
+      type: 'TASK_COMPLETED',
+      title: 'Task completed',
+      description: task.title,
+      icon: 'material-symbols:task-alt-outline-rounded',
+      entityId: task.id,
+      entityType: 'task',
+      farmId: task.farmId,
+      metadata: {
+        cropCycleName: task.cropCycleName,
+        plotName: task.plotName,
+      },
+    });
 
     return {
       completed: completedTask,
@@ -183,5 +228,49 @@ export class TasksService {
   async remove(id: string) {
     await this.findOne(id);
     return this.prisma.task.delete({ where: { id } });
+  }
+
+  async checkAndTriggerReadyTasks(farmId: string) {
+    const now = new Date();
+    
+    const readyTasks = await this.prisma.task.findMany({
+      where: {
+        farmId,
+        nodeType: 'wait',
+        status: 'todo',
+        dueDate: { lte: now },
+      },
+      include: { workflow: true },
+    });
+
+    const triggeredTasks: any[] = [];
+    
+    for (const task of readyTasks) {
+      const nextTaskData = getNextTask(
+        task.nodeId || '',
+        undefined,
+        (task.workflow?.nodes as any[]) || [],
+        (task.workflow?.edges as any[]) || [],
+        task.cropCycleId || '',
+        task.workflowId || '',
+        task.workflowName || '',
+        task.cropCycleName || '',
+        task.plotName || '',
+        task.stageIndex || 0,
+        farmId,
+      );
+
+      if (nextTaskData) {
+        const createdTask = await this.prisma.task.create({ data: nextTaskData });
+        triggeredTasks.push(createdTask);
+      }
+      
+      await this.prisma.task.update({
+        where: { id: task.id },
+        data: { status: 'done' },
+      });
+    }
+
+    return triggeredTasks;
   }
 }

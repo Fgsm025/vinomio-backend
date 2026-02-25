@@ -4,6 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { ActivitiesService } from '../activities/activities.service';
 import { CreateCropCycleDto } from './dto/create-crop-cycle.dto';
 import { CreateMultipleCropCyclesDto } from './dto/create-multiple-crop-cycles.dto';
 import { UpdateCropCycleDto } from './dto/update-crop-cycle.dto';
@@ -79,7 +80,10 @@ function enrichCycle<
 
 @Injectable()
 export class CropCyclesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly activitiesService: ActivitiesService,
+  ) {}
 
   private async resolveWorkflowName(cycle: {
     templateId?: string | null;
@@ -296,6 +300,19 @@ export class CropCyclesService {
 
     const enriched = enrichCycle(cycle);
     const withName = await this.addWorkflowTemplateName(enriched);
+    
+    if (farmId) {
+      this.activitiesService.log({
+        type: 'CROP_CYCLE_CREATED',
+        title: 'Production cycle started',
+        description: `${cropName} planted in ${plotName}`,
+        icon: 'material-symbols:eco-outline-rounded',
+        entityId: cycle.id,
+        entityType: 'crop_cycle',
+        farmId,
+      });
+    }
+    
     return this.enrichStagesWithWorkflowNames(withName);
   }
 
@@ -439,8 +456,96 @@ export class CropCyclesService {
     const cycle = await this.prisma.cropCycle.update({
       where: { id },
       data: data as never,
-      include: { crop: true, plot: { include: { field: true } } },
+      include: { crop: true, plot: { include: { field: true } }, tasks: true },
     });
+
+    const farmId = cycle.plot?.field?.farmId;
+    const cropName = cycle.crop?.product || cycle.crop?.nameOrDescription || 'Crop';
+    const plotName = cycle.plot?.name || 'Plot';
+    if (
+      farmId &&
+      dto.workflowOption === 'stages' &&
+      Array.isArray(dto.stages) &&
+      dto.stages.length > 0
+    ) {
+      const existingTaskWorkflowIds = new Set(
+        (cycle.tasks ?? []).map((t) => t.workflowId).filter(Boolean)
+      );
+      for (let i = 0; i < dto.stages.length; i++) {
+        const stage = dto.stages[i];
+        const workflowIds = [
+          ...(stage.workflowId ? [stage.workflowId] : []),
+          ...(stage.subWorkflowIds || []),
+        ];
+        for (const workflowId of workflowIds) {
+          if (existingTaskWorkflowIds.has(workflowId)) continue;
+          const workflow = await this.prisma.workflow.findUnique({
+            where: { id: workflowId },
+          });
+          if (!workflow) continue;
+          const nodes = Array.isArray(workflow.nodes) ? (workflow.nodes as any[]) : [];
+          const edges = Array.isArray(workflow.edges) ? (workflow.edges as any[]) : [];
+          if (nodes.length === 0) continue;
+          const firstTask = getFirstTaskFromWorkflow(
+            nodes,
+            edges,
+            cycle.id,
+            workflow.id,
+            workflow.name,
+            cropName,
+            plotName,
+            i,
+            farmId,
+          );
+          if (firstTask) {
+            await this.prisma.task.create({ data: firstTask });
+            existingTaskWorkflowIds.add(workflowId);
+          }
+        }
+      }
+    }
+
+    if (farmId) {
+      if (dto.currentStatus && dto.currentStatus !== existing.currentStatus) {
+        this.activitiesService.log({
+          type: 'CROP_CYCLE_STAGE_CHANGED',
+          title: 'Production cycle stage changed',
+          description: `${cropName} in ${plotName} moved to ${dto.currentStatus}`,
+          icon: 'material-symbols:swap-horiz-rounded',
+          entityId: cycle.id,
+          entityType: 'crop_cycle',
+          farmId,
+        });
+      }
+      
+      if (dto.status && (dto.status === 'completed' || dto.status === 'archived') && existing.status !== dto.status) {
+        this.activitiesService.log({
+          type: 'CROP_CYCLE_COMPLETED',
+          title: 'Production cycle completed',
+          description: `${cropName} cycle in ${plotName} has been ${dto.status}`,
+          icon: 'material-symbols:check-circle-outline-rounded',
+          entityId: cycle.id,
+          entityType: 'crop_cycle',
+          farmId,
+        });
+      }
+      
+      if ((dto.actualHarvestStartDate || dto.actualHarvestEndDate || dto.actualYield) && 
+          (!existing.actualHarvestStartDate || dto.actualYield !== existing.actualYield)) {
+        const yieldInfo = dto.actualYield ? ` - ${dto.actualYield} ${cycle.yieldUnit || 'units'}` : '';
+        this.activitiesService.log({
+          type: 'HARVEST_RECORDED',
+          title: 'Harvest recorded',
+          description: `Harvest data recorded for ${cropName} in ${plotName}${yieldInfo}`,
+          icon: 'material-symbols:agriculture-rounded',
+          entityId: cycle.id,
+          entityType: 'crop_cycle',
+          farmId,
+          metadata: dto.actualYield ? { yield: dto.actualYield, unit: cycle.yieldUnit } : undefined,
+        });
+      }
+    }
+    
     const enriched = enrichCycle(cycle);
     const withName = await this.addWorkflowTemplateName(enriched);
     return this.enrichStagesWithWorkflowNames(withName);
@@ -448,6 +553,9 @@ export class CropCyclesService {
 
   async remove(id: string) {
     await this.findOne(id);
-    return this.prisma.cropCycle.delete({ where: { id } });
+    await this.prisma.$transaction([
+      this.prisma.task.deleteMany({ where: { cropCycleId: id } }),
+      this.prisma.cropCycle.delete({ where: { id } })
+    ]);
   }
 }

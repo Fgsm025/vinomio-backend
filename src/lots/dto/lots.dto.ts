@@ -4,7 +4,6 @@ import {
   IsNumber,
   IsNotEmpty,
   IsBoolean,
-  IsArray,
   IsObject,
 } from 'class-validator';
 
@@ -44,11 +43,6 @@ export class CreateLotDto {
   @IsOptional()
   @IsString()
   fieldId?: string;
-
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  facilityBuildingIds?: string[];
 
   @IsOptional()
   @IsString()

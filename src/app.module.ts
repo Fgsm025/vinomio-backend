@@ -22,10 +22,12 @@ import { PurchasesModule } from './purchases/purchases.module';
 import { InvitationsModule } from './invitations/invitations.module';
 import { WorkflowsModule } from './workflows/workflows.module';
 import { UsersModule } from './users/users.module';
+import { ActivitiesModule } from './activities/activities.module';
 
 @Module({
   imports: [
     PrismaModule,
+    ActivitiesModule,
     TasksModule,
     AuthModule,
     FacilitiesModule,
