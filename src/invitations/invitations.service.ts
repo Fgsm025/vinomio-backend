@@ -69,6 +69,30 @@ export class InvitationsService {
     });
   }
 
+  async verifyInvitation(token: string) {
+    const invitation = await this.prisma.invitation.findUnique({
+      where: { token },
+      include: {
+        farm: {
+          select: { id: true, name: true, slug: true },
+        },
+      },
+    });
+
+    if (!invitation) {
+      throw new NotFoundException('Invalid invitation token');
+    }
+
+    return {
+      email: invitation.email,
+      role: invitation.role,
+      farmName: invitation.farm.name,
+      farmSlug: invitation.farm.slug,
+      status: invitation.status,
+      expired: invitation.expiresAt < new Date(),
+    };
+  }
+
   async acceptInvitation(acceptInvitationDto: AcceptInvitationDto) {
     const invitation = await this.prisma.invitation.findUnique({
       where: { token: acceptInvitationDto.token },
@@ -100,18 +124,31 @@ export class InvitationsService {
           email: invitation.email,
           password: hashedPassword,
           name: acceptInvitationDto.name,
-          hasCompletedOnboarding: false,
+          hasCompletedOnboarding: true,
+        },
+      });
+    } else {
+      if (!user.hasCompletedOnboarding) {
+        await this.prisma.user.update({
+          where: { id: user.id },
+          data: { hasCompletedOnboarding: true },
+        });
+      }
+    }
+
+    const existingMembership = await this.prisma.userFarm.findUnique({
+      where: { userId_farmId: { userId: user.id, farmId: invitation.farmId } },
+    });
+
+    if (!existingMembership) {
+      await this.prisma.userFarm.create({
+        data: {
+          userId: user.id,
+          farmId: invitation.farmId,
+          role: invitation.role,
         },
       });
     }
-
-    await this.prisma.userFarm.create({
-      data: {
-        userId: user.id,
-        farmId: invitation.farmId,
-        role: invitation.role,
-      },
-    });
 
     await this.prisma.invitation.update({
       where: { id: invitation.id },
@@ -126,11 +163,12 @@ export class InvitationsService {
         id: user.id,
         email: user.email,
         name: user.name,
-        hasCompletedOnboarding: user.hasCompletedOnboarding,
+        hasCompletedOnboarding: true,
       },
       farm: {
         id: invitation.farm.id,
         name: invitation.farm.name,
+        slug: invitation.farm.slug,
       },
       role: invitation.role,
     };

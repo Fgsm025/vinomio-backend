@@ -37,6 +37,11 @@ export class InvitationsController {
     );
   }
 
+  @Get('verify/:token')
+  verify(@Param('token') token: string) {
+    return this.invitationsService.verifyInvitation(token);
+  }
+
   @Post('accept')
   accept(@Body() acceptInvitationDto: AcceptInvitationDto) {
     return this.invitationsService.acceptInvitation(acceptInvitationDto);

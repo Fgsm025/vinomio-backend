@@ -18,6 +18,42 @@ export class TeamMembersService {
     });
   }
 
+  /** Returns users with access to the farm (UserFarm), for personnel list. */
+  async findFarmMembers(farmId: string) {
+    const userFarms = await this.prisma.userFarm.findMany({
+      where: { farmId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    return userFarms.map((uf) => {
+      const rawName = uf.user.name?.trim();
+      const isRealName = rawName && !rawName.includes('@');
+      const displayName =
+        isRealName ? rawName : (uf.user.email?.split('@')[0] || 'User').replace(/^\w/, (c) => c.toUpperCase());
+
+      return {
+        id: uf.user.id,
+        name: displayName,
+        email: uf.user.email,
+        avatar: uf.user.avatar,
+        farmId,
+        role: uf.role,
+        startDate: null,
+        status: 'active',
+      };
+    });
+  }
+
   async findOne(id: string) {
     const member = await this.prisma.teamMember.findUnique({
       where: { id },
