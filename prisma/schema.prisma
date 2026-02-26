@@ -250,6 +250,8 @@ model Farm {
   tasks               Task[]
   waterConsumptions   WaterConsumption[]
   activities          Activity[]
+  attendanceCodes     AttendanceCode?
+  attendance          Attendance[]
 
   @@map("farms")
 }
@@ -523,7 +525,8 @@ model TeamMember {
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
 
-  farm Farm @relation(fields: [farmId], references: [id])
+  farm       Farm        @relation(fields: [farmId], references: [id])
+  attendance Attendance[]
 
   @@map("team_members")
 }
@@ -680,4 +683,34 @@ model Activity {
   farm Farm @relation(fields: [farmId], references: [id], onDelete: Cascade)
 
   @@map("activities")
+}
+
+model AttendanceCode {
+  id        String   @id @default(uuid())
+  farmId    String   @unique @map("farm_id")
+  code      String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  farm Farm @relation(fields: [farmId], references: [id], onDelete: Cascade)
+
+  @@map("attendance_codes")
+}
+
+model Attendance {
+  id           String   @id @default(uuid())
+  teamMemberId String   @map("team_member_id")
+  farmId       String   @map("farm_id")
+  type         String   // "check_in" | "check_out"
+  timestamp    DateTime @default(now())
+  latitude     Float?
+  longitude    Float?
+  method       String   @default("qr") // "qr" | "code"
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  teamMember TeamMember @relation(fields: [teamMemberId], references: [id], onDelete: Cascade)
+  farm       Farm       @relation(fields: [farmId], references: [id], onDelete: Cascade)
+
+  @@index([teamMemberId, timestamp])
+  @@map("attendance")
 }

@@ -57,8 +57,23 @@ export class TasksService {
     const tasks = await this.prisma.task.findMany({
       where,
       orderBy: { createdAt: 'desc' },
+      include: {
+        cropCycle: {
+          include: {
+            plot: { include: { field: true } },
+          },
+        },
+      },
     });
-    const needEnrich = tasks.filter(
+
+    const withFieldAndCycleName = tasks.map((task) => {
+      const { cropCycle, ...rest } = task;
+      const fieldName = cropCycle?.plot?.field?.name ?? null;
+      const cropCycleName = cropCycle?.name || task.cropCycleName;
+      return { ...rest, fieldName, cropCycleName };
+    });
+
+    const needEnrich = withFieldAndCycleName.filter(
       (t) =>
         t.sourceType === 'workflow_node' &&
         t.workflowId &&
@@ -66,13 +81,14 @@ export class TasksService {
         (!t.conditionOptions || t.conditionOptions.length === 0) &&
         t.status !== 'done'
     );
-    if (needEnrich.length === 0) return tasks;
+    if (needEnrich.length === 0) return withFieldAndCycleName;
     const workflowIds = [...new Set(needEnrich.map((t) => t.workflowId!).filter(Boolean))];
     const workflows = await this.prisma.workflow.findMany({
       where: { id: { in: workflowIds } },
     });
     const workflowMap = new Map(workflows.map((w) => [w.id, w]));
-    return tasks.map((task) => {
+
+    return withFieldAndCycleName.map((task) => {
       if (
         task.sourceType !== 'workflow_node' ||
         !task.workflowId ||

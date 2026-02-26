@@ -23,10 +23,12 @@ import { InvitationsModule } from './invitations/invitations.module';
 import { WorkflowsModule } from './workflows/workflows.module';
 import { UsersModule } from './users/users.module';
 import { ActivitiesModule } from './activities/activities.module';
+import { AttendanceModule } from './attendance/attendance.module';
 
 @Module({
   imports: [
     PrismaModule,
+    AttendanceModule,
     ActivitiesModule,
     TasksModule,
     AuthModule,

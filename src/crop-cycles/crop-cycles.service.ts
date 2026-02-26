@@ -230,6 +230,7 @@ export class CropCyclesService {
     const farmId = cycle.plot?.field?.farmId;
     const cropName = cycle.crop?.product || cycle.crop?.nameOrDescription || '';
     const plotName = cycle.plot?.name || '';
+    const cycleDisplayName = cycle.name || `${cropName} - ${plotName}`.trim() || 'Ciclo';
 
     if (farmId && dto.workflowOption === 'template' && dto.templateId) {
       const workflow = await this.prisma.workflow.findUnique({
@@ -245,7 +246,7 @@ export class CropCyclesService {
             cycle.id,
             workflow.id,
             workflow.name,
-            cropName,
+            cycleDisplayName,
             plotName,
             0,
             farmId,
@@ -285,7 +286,7 @@ export class CropCyclesService {
             cycle.id,
             workflow.id,
             workflow.name,
-            cropName,
+            cycleDisplayName,
             plotName,
             i,
             farmId,
@@ -324,18 +325,54 @@ export class CropCyclesService {
     const results: Awaited<ReturnType<typeof this.create>>[] = [];
     const errors: Array<{ plotId: string; error: string }> = [];
 
-    for (const plotId of dto.plotIds) {
+    const firstPlotId = dto.plotIds[0];
+    const remainingPlotIds = dto.plotIds.slice(1);
+
+    try {
+      const firstDto: CreateCropCycleDto = {
+        ...dto,
+        plotId: firstPlotId,
+      } as CreateCropCycleDto;
+      const firstCycle = await this.create(firstDto);
+      results.push(firstCycle);
+    } catch (error) {
+      errors.push({
+        plotId: firstPlotId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+
+    for (const plotId of remainingPlotIds) {
       try {
         const singleDto: CreateCropCycleDto = {
           ...dto,
           plotId,
-        } as CreateCropCycleDto;
+          workflowOption: 'none',
+          templateId: undefined,
+          stages: undefined,
+        } as unknown as CreateCropCycleDto;
         const cycle = await this.create(singleDto);
         results.push(cycle);
       } catch (error) {
         errors.push({
           plotId,
           error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    }
+
+    if (results.length > 1) {
+      const primaryId = results[0].id;
+      const siblingIds = results.slice(1).map((r) => r.id);
+      const allTasks = await this.prisma.task.findMany({
+        where: { cropCycleId: primaryId },
+      });
+      const plotNames = results.map((r: any) => r.plot?.name).filter(Boolean);
+      const combinedPlotName = plotNames.join(', ');
+      if (combinedPlotName && allTasks.length > 0) {
+        await this.prisma.task.updateMany({
+          where: { cropCycleId: primaryId },
+          data: { plotName: combinedPlotName },
         });
       }
     }
