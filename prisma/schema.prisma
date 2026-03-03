@@ -6,6 +6,50 @@ datasource db {
   provider = "postgresql"
 }
 
+enum CertificationType {
+  GLOBAL_GAP
+  USDA_ORGANIC
+  USDA_GAP
+  EU_ORGANIC
+  BIODYNAMIC_DEMETER
+  ROC
+  RAINFOREST_ALLIANCE
+  HACCP
+  BRC
+  ISO_22000
+  IFS
+  SQF
+  HARMONIZED_GAP
+  NON_GMO_PROJECT
+  FAIR_TRADE_USA
+  FAIRTRADE_INTERNATIONAL
+  COMERCIO_JUSTO_CLAC
+  CERTIFIED_NATURALLY_GROWN
+  AMERICAN_GRASSFED
+  ANIMAL_WELFARE_APPROVED
+  BPA_SENASA_AR
+  BPA_SENASICA_MX
+  ORGANICO_SENASA_AR
+  MEXICO_ORGANICO
+  ORGANICO_BRASIL_IBD
+  FLORVERDE
+  MPS
+  LEAF_MARQUE
+  BONSUCRO
+  RSPO
+  FOUR_C
+  ISO_14001
+  CARBON_FOOTPRINT
+  SEDEX_SMETA
+  TESCO_NURTURE
+}
+
+enum CertificationStatus {
+  ACTIVE
+  PENDING
+  EXPIRED
+}
+
 enum Role {
   OWNER
   ADMIN
@@ -167,6 +211,7 @@ model Animal {
 
   farm  Farm?  @relation(fields: [farmId], references: [id], onDelete: SetNull)
   field Field? @relation(fields: [fieldId], references: [id], onDelete: SetNull)
+  diagnostics Diagnostic[]
 
   @@map("animals")
 }
@@ -224,7 +269,7 @@ model Farm {
   lastFrostDate      String?   @map("last_frost_date")
   firstFrostDate     String?   @map("first_frost_date")
   
-  certifications     String[]  @default([]) @map("certifications")
+  certifications     FarmCertification[]
   
   workingHoursStart  String?   @map("working_hours_start")
   workingHoursEnd    String?   @map("working_hours_end")
@@ -240,6 +285,8 @@ model Farm {
   fields              Field[]
   machinery           Machinery[]
   animals             Animal[]
+  sprayRecords        SprayRecord[]
+  scoutingRecords     ScoutingRecord[]
   teamMembers         TeamMember[]
   traceabilityRecords TraceabilityRecord[]
   products            Product[]
@@ -252,6 +299,9 @@ model Farm {
   activities          Activity[]
   attendanceCodes     AttendanceCode?
   attendance          Attendance[]
+  reportTemplates     ReportTemplate[]
+
+  certificationsLegacy String[] @default([]) @map("certifications")
 
   @@map("farms")
 }
@@ -350,6 +400,8 @@ model Plot {
   plotsOnIrrigationSchedule PlotOnIrrigationSchedule[]
   rainfallEvents            RainfallEvent[]
   traceabilityRecords       TraceabilityRecord[]
+  sprayRecords              SprayRecord[]
+  scoutingRecords           ScoutingRecord[]
 
   @@map("plots")
 }
@@ -551,6 +603,77 @@ model TraceabilityRecord {
   @@map("traceability_records")
 }
 
+model SprayRecord {
+  id        String   @id @default(uuid())
+  farmId    String   @map("farm_id")
+  plotId    String?  @map("plot_id")
+  productId String   @map("product_id")
+  date      DateTime @db.Date
+  dose      Float?
+  unit      String?  @default("l/ha") @map("unit")
+  operator  String?  @map("operator")
+  notes     String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  farm    Farm   @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  plot    Plot?  @relation(fields: [plotId], references: [id], onDelete: SetNull)
+  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@map("spray_records")
+}
+
+model ScoutingRecord {
+  id               String    @id @default(uuid())
+  farmId           String    @map("farm_id")
+  plotId           String    @map("plot_id")
+  observationDate  DateTime  @db.Date @map("observation_date")
+  pestOrIssue      String    @map("pest_or_issue")
+  severity         String    @map("severity")
+  notes            String?
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  farm        Farm    @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  plot        Plot    @relation(fields: [plotId], references: [id], onDelete: Cascade)
+  diagnostics Diagnostic[]
+
+  @@map("scouting_records")
+}
+
+model Diagnostic {
+  id               String    @id @default(uuid())
+  scoutingRecordId String?   @map("scouting_record_id")
+  animalId         String?   @map("animal_id")
+  diagnosisDate    DateTime? @db.Date @map("diagnosis_date")
+  type             String
+  severity         String?
+  notes            String?
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  scoutingRecord ScoutingRecord? @relation(fields: [scoutingRecordId], references: [id], onDelete: SetNull)
+  animal         Animal?         @relation(fields: [animalId], references: [id], onDelete: SetNull)
+
+  @@map("diagnostics")
+}
+
+model ReportTemplate {
+  id        String   @id @default(uuid())
+  farmId    String   @map("farm_id")
+  name      String
+  dataSource String  @map("data_source")
+  filters   Json
+  groupBy   String[] @default([]) @map("group_by")
+  columns   String[] @default([]) @map("columns")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  farm Farm @relation(fields: [farmId], references: [id], onDelete: Cascade)
+
+  @@map("report_templates")
+}
+
 model Product {
   id          String   @id @default(uuid())
   name        String
@@ -563,6 +686,7 @@ model Product {
 
   farm           Farm    @relation(fields: [farmId], references: [id], onDelete: Cascade)
   stockMovements Stock[]
+  sprayRecords   SprayRecord[]
 
   @@map("products")
 }
@@ -713,4 +837,21 @@ model Attendance {
 
   @@index([teamMemberId, timestamp])
   @@map("attendance")
+}
+
+model FarmCertification {
+  id              String              @id @default(uuid())
+  farmId          String              @map("farm_id")
+  type            CertificationType
+  status          CertificationStatus @default(PENDING)
+  issueDate       DateTime?           @map("issue_date")
+  expiryDate      DateTime?           @map("expiry_date")
+  certificateUrl  String?             @map("certificate_url")
+  complianceScore Int                 @default(0) // 0-100 %
+  createdAt       DateTime            @default(now()) @map("created_at")
+  updatedAt       DateTime            @updatedAt @map("updated_at")
+
+  farm Farm @relation(fields: [farmId], references: [id], onDelete: Cascade)
+
+  @@map("farm_certifications")
 }
