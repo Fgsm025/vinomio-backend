@@ -1,4 +1,10 @@
 -- CreateEnum
+CREATE TYPE "CertificationType" AS ENUM ('GLOBAL_GAP', 'USDA_ORGANIC', 'USDA_GAP', 'EU_ORGANIC', 'BIODYNAMIC_DEMETER', 'ROC', 'RAINFOREST_ALLIANCE', 'HACCP', 'BRC', 'ISO_22000', 'IFS', 'SQF', 'HARMONIZED_GAP', 'NON_GMO_PROJECT', 'FAIR_TRADE_USA', 'FAIRTRADE_INTERNATIONAL', 'COMERCIO_JUSTO_CLAC', 'CERTIFIED_NATURALLY_GROWN', 'AMERICAN_GRASSFED', 'ANIMAL_WELFARE_APPROVED', 'BPA_SENASA_AR', 'BPA_SENASICA_MX', 'ORGANICO_SENASA_AR', 'MEXICO_ORGANICO', 'ORGANICO_BRASIL_IBD', 'FLORVERDE', 'MPS', 'LEAF_MARQUE', 'BONSUCRO', 'RSPO', 'FOUR_C', 'ISO_14001', 'CARBON_FOOTPRINT', 'SEDEX_SMETA', 'TESCO_NURTURE');
+
+-- CreateEnum
+CREATE TYPE "CertificationStatus" AS ENUM ('ACTIVE', 'PENDING', 'EXPIRED');
+
+-- CreateEnum
 CREATE TYPE "Role" AS ENUM ('OWNER', 'ADMIN', 'FINANCE', 'AGRONOMIST', 'OPERATOR');
 
 -- CreateTable
@@ -198,7 +204,6 @@ CREATE TABLE "farms" (
     "avg_temperature" TEXT,
     "last_frost_date" TEXT,
     "first_frost_date" TEXT,
-    "certifications" TEXT[] DEFAULT ARRAY[]::TEXT[],
     "working_hours_start" TEXT,
     "working_hours_end" TEXT,
     "harvest_days" TEXT[] DEFAULT ARRAY[]::TEXT[],
@@ -206,6 +211,7 @@ CREATE TABLE "farms" (
     "team_size" TEXT,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
+    "certifications" TEXT[] DEFAULT ARRAY[]::TEXT[],
 
     CONSTRAINT "farms_pkey" PRIMARY KEY ("id")
 );
@@ -279,7 +285,6 @@ CREATE TABLE "plots" (
     "tenure_regime" TEXT,
     "field_id" TEXT NOT NULL,
     "is_auto_generated" BOOLEAN NOT NULL DEFAULT false,
-    "facility_building_ids" TEXT[],
     "soil_type" TEXT,
     "irrigation_system" TEXT,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -326,6 +331,22 @@ CREATE TABLE "crop_cycles" (
     "updated_at" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "crop_cycles_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "crop_sales" (
+    "id" TEXT NOT NULL,
+    "crop_cycle_id" TEXT NOT NULL,
+    "harvest_id" TEXT,
+    "date" DATE NOT NULL,
+    "quantity" DOUBLE PRECISION NOT NULL,
+    "unit" TEXT NOT NULL DEFAULT 'kg',
+    "price" DOUBLE PRECISION,
+    "buyer" TEXT,
+    "notes" TEXT,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "crop_sales_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -448,6 +469,68 @@ CREATE TABLE "traceability_records" (
 );
 
 -- CreateTable
+CREATE TABLE "spray_records" (
+    "id" TEXT NOT NULL,
+    "farm_id" TEXT NOT NULL,
+    "plot_id" TEXT,
+    "product_id" TEXT NOT NULL,
+    "date" DATE NOT NULL,
+    "dose" DOUBLE PRECISION,
+    "unit" TEXT DEFAULT 'l/ha',
+    "operator" TEXT,
+    "notes" TEXT,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "spray_records_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "scouting_records" (
+    "id" TEXT NOT NULL,
+    "farm_id" TEXT NOT NULL,
+    "plot_id" TEXT NOT NULL,
+    "observation_date" DATE NOT NULL,
+    "pest_or_issue" TEXT NOT NULL,
+    "severity" TEXT NOT NULL,
+    "notes" TEXT,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "scouting_records_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "diagnostics" (
+    "id" TEXT NOT NULL,
+    "scouting_record_id" TEXT,
+    "animal_id" TEXT,
+    "diagnosis_date" DATE,
+    "type" TEXT NOT NULL,
+    "severity" TEXT,
+    "notes" TEXT,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "diagnostics_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "report_templates" (
+    "id" TEXT NOT NULL,
+    "farm_id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "data_source" TEXT NOT NULL,
+    "filters" JSONB NOT NULL,
+    "group_by" TEXT[] DEFAULT ARRAY[]::TEXT[],
+    "columns" TEXT[] DEFAULT ARRAY[]::TEXT[],
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "report_templates_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "products" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
@@ -548,6 +631,65 @@ CREATE TABLE "tasks" (
     CONSTRAINT "tasks_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "activities" (
+    "id" TEXT NOT NULL,
+    "type" TEXT NOT NULL,
+    "title" TEXT NOT NULL,
+    "description" TEXT,
+    "icon" TEXT NOT NULL,
+    "entity_id" TEXT,
+    "entity_type" TEXT,
+    "farm_id" TEXT NOT NULL,
+    "user_id" TEXT,
+    "metadata" JSONB,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "activities_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "attendance_codes" (
+    "id" TEXT NOT NULL,
+    "farm_id" TEXT NOT NULL,
+    "code" TEXT NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "attendance_codes_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "attendance" (
+    "id" TEXT NOT NULL,
+    "team_member_id" TEXT NOT NULL,
+    "farm_id" TEXT NOT NULL,
+    "type" TEXT NOT NULL,
+    "timestamp" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "latitude" DOUBLE PRECISION,
+    "longitude" DOUBLE PRECISION,
+    "method" TEXT NOT NULL DEFAULT 'qr',
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "attendance_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "farm_certifications" (
+    "id" TEXT NOT NULL,
+    "farm_id" TEXT NOT NULL,
+    "type" "CertificationType" NOT NULL,
+    "status" "CertificationStatus" NOT NULL DEFAULT 'PENDING',
+    "issue_date" TIMESTAMP(3),
+    "expiry_date" TIMESTAMP(3),
+    "certificate_url" TEXT,
+    "complianceScore" INTEGER NOT NULL DEFAULT 0,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "farm_certifications_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
 
@@ -565,6 +707,15 @@ CREATE UNIQUE INDEX "invitations_token_key" ON "invitations"("token");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "stock_purchase_id_key" ON "stock"("purchase_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "attendance_codes_farm_id_key" ON "attendance_codes"("farm_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "attendance_codes_code_key" ON "attendance_codes"("code");
+
+-- CreateIndex
+CREATE INDEX "attendance_team_member_id_timestamp_idx" ON "attendance"("team_member_id", "timestamp");
 
 -- AddForeignKey
 ALTER TABLE "facilities" ADD CONSTRAINT "facilities_field_id_fkey" FOREIGN KEY ("field_id") REFERENCES "fields"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -609,6 +760,9 @@ ALTER TABLE "crop_cycles" ADD CONSTRAINT "crop_cycles_crop_id_fkey" FOREIGN KEY 
 ALTER TABLE "crop_cycles" ADD CONSTRAINT "crop_cycles_plot_id_fkey" FOREIGN KEY ("plot_id") REFERENCES "plots"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "crop_sales" ADD CONSTRAINT "crop_sales_crop_cycle_id_fkey" FOREIGN KEY ("crop_cycle_id") REFERENCES "crop_cycles"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "livestock_groups" ADD CONSTRAINT "livestock_groups_field_id_fkey" FOREIGN KEY ("field_id") REFERENCES "fields"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -648,6 +802,30 @@ ALTER TABLE "traceability_records" ADD CONSTRAINT "traceability_records_field_id
 ALTER TABLE "traceability_records" ADD CONSTRAINT "traceability_records_plot_id_fkey" FOREIGN KEY ("plot_id") REFERENCES "plots"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "spray_records" ADD CONSTRAINT "spray_records_farm_id_fkey" FOREIGN KEY ("farm_id") REFERENCES "farms"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "spray_records" ADD CONSTRAINT "spray_records_plot_id_fkey" FOREIGN KEY ("plot_id") REFERENCES "plots"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "spray_records" ADD CONSTRAINT "spray_records_product_id_fkey" FOREIGN KEY ("product_id") REFERENCES "products"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "scouting_records" ADD CONSTRAINT "scouting_records_farm_id_fkey" FOREIGN KEY ("farm_id") REFERENCES "farms"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "scouting_records" ADD CONSTRAINT "scouting_records_plot_id_fkey" FOREIGN KEY ("plot_id") REFERENCES "plots"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "diagnostics" ADD CONSTRAINT "diagnostics_scouting_record_id_fkey" FOREIGN KEY ("scouting_record_id") REFERENCES "scouting_records"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "diagnostics" ADD CONSTRAINT "diagnostics_animal_id_fkey" FOREIGN KEY ("animal_id") REFERENCES "animals"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "report_templates" ADD CONSTRAINT "report_templates_farm_id_fkey" FOREIGN KEY ("farm_id") REFERENCES "farms"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "products" ADD CONSTRAINT "products_farm_id_fkey" FOREIGN KEY ("farm_id") REFERENCES "farms"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -675,7 +853,22 @@ ALTER TABLE "workflows" ADD CONSTRAINT "workflows_farm_id_fkey" FOREIGN KEY ("fa
 ALTER TABLE "tasks" ADD CONSTRAINT "tasks_farm_id_fkey" FOREIGN KEY ("farm_id") REFERENCES "farms"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "tasks" ADD CONSTRAINT "tasks_crop_cycle_id_fkey" FOREIGN KEY ("crop_cycle_id") REFERENCES "crop_cycles"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "tasks" ADD CONSTRAINT "tasks_crop_cycle_id_fkey" FOREIGN KEY ("crop_cycle_id") REFERENCES "crop_cycles"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "tasks" ADD CONSTRAINT "tasks_workflow_id_fkey" FOREIGN KEY ("workflow_id") REFERENCES "workflows"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "tasks" ADD CONSTRAINT "tasks_workflow_id_fkey" FOREIGN KEY ("workflow_id") REFERENCES "workflows"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "activities" ADD CONSTRAINT "activities_farm_id_fkey" FOREIGN KEY ("farm_id") REFERENCES "farms"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "attendance_codes" ADD CONSTRAINT "attendance_codes_farm_id_fkey" FOREIGN KEY ("farm_id") REFERENCES "farms"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "attendance" ADD CONSTRAINT "attendance_team_member_id_fkey" FOREIGN KEY ("team_member_id") REFERENCES "team_members"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "attendance" ADD CONSTRAINT "attendance_farm_id_fkey" FOREIGN KEY ("farm_id") REFERENCES "farms"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "farm_certifications" ADD CONSTRAINT "farm_certifications_farm_id_fkey" FOREIGN KEY ("farm_id") REFERENCES "farms"("id") ON DELETE CASCADE ON UPDATE CASCADE;
