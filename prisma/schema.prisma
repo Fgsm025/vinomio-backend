@@ -161,14 +161,14 @@ model Crop {
   maturationDays                  Int?     @map("maturation_days")
   harvestDays                     Int?     @map("harvest_days")
   postHarvestDays                 Int?     @map("post_harvest_days")
-  productionType                  String?   @map("production_type")
-  propagationRootingDays          Int?      @map("propagation_rooting_days")
-  propagationPotDays              Int?      @map("propagation_pot_days")
-  propagationSaleDays             Int?      @map("propagation_sale_days")
-  cuttingsPerExtraction           Int?      @map("cuttings_per_extraction")
-  extractionFrequencyDays         Int?      @map("extraction_frequency_days")
-  productiveYears                 Int?      @map("productive_years")
-  harvestsPerYear                 Int?      @map("harvests_per_year")
+  productionType                  String?  @map("production_type")
+  propagationRootingDays          Int?     @map("propagation_rooting_days")
+  propagationPotDays              Int?     @map("propagation_pot_days")
+  propagationSaleDays             Int?     @map("propagation_sale_days")
+  cuttingsPerExtraction           Int?     @map("cuttings_per_extraction")
+  extractionFrequencyDays         Int?     @map("extraction_frequency_days")
+  productiveYears                 Int?     @map("productive_years")
+  harvestsPerYear                 Int?     @map("harvests_per_year")
   createdAt                       DateTime @default(now()) @map("created_at")
   updatedAt                       DateTime @updatedAt @map("updated_at")
 
@@ -209,8 +209,8 @@ model Animal {
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
-  farm  Farm?  @relation(fields: [farmId], references: [id], onDelete: SetNull)
-  field Field? @relation(fields: [fieldId], references: [id], onDelete: SetNull)
+  farm        Farm?        @relation(fields: [farmId], references: [id], onDelete: SetNull)
+  field       Field?       @relation(fields: [fieldId], references: [id], onDelete: SetNull)
   diagnostics Diagnostic[]
 
   @@map("animals")
@@ -236,7 +236,7 @@ model WaterConsumption {
   farmId       String   @map("farm_id")
   source       String
   isPotable    Boolean  @map("is_potable")
-  analysisDate DateTime @db.Date @map("analysis_date")
+  analysisDate DateTime @map("analysis_date") @db.Date
   fileUrl      String?  @map("file_url")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
@@ -247,36 +247,37 @@ model WaterConsumption {
 }
 
 model Farm {
-  id        String   @id @default(uuid())
-  name      String
-  slug      String   @unique
+  id            String  @id @default(uuid())
+  name          String
+  slug          String  @unique
+  documentoUrl  String? @map("documento_url")
   location  String?
   country   String?
   province  String?
   latitude  Float?
   longitude Float?
-  
-  farmSize           Float?    @map("farm_size")
-  primaryProduction  String?   @map("primary_production")
-  
-  irrigationSystem   String?   @map("irrigation_system")
-  
-  hasFrost           Boolean   @default(false) @map("has_frost")
-  frostMonths        String[]  @default([]) @map("frost_months")
-  rainyMonths        String[]  @default([]) @map("rainy_months")
-  avgTemperature     String?   @map("avg_temperature")
-  
-  lastFrostDate      String?   @map("last_frost_date")
-  firstFrostDate     String?   @map("first_frost_date")
-  
-  certifications     FarmCertification[]
-  
-  workingHoursStart  String?   @map("working_hours_start")
-  workingHoursEnd    String?   @map("working_hours_end")
-  harvestDays        String[]  @default([]) @map("harvest_days")
-  growingSeasonStart String?   @map("growing_season_start")
-  teamSize           String?   @map("team_size")
-  
+
+  farmSize          Float?  @map("farm_size")
+  primaryProduction String? @map("primary_production")
+
+  irrigationSystem String? @map("irrigation_system")
+
+  hasFrost       Boolean  @default(false) @map("has_frost")
+  frostMonths    String[] @default([]) @map("frost_months")
+  rainyMonths    String[] @default([]) @map("rainy_months")
+  avgTemperature String?  @map("avg_temperature")
+
+  lastFrostDate  String? @map("last_frost_date")
+  firstFrostDate String? @map("first_frost_date")
+
+  certifications FarmCertification[]
+
+  workingHoursStart  String?  @map("working_hours_start")
+  workingHoursEnd    String?  @map("working_hours_end")
+  harvestDays        String[] @default([]) @map("harvest_days")
+  growingSeasonStart String?  @map("growing_season_start")
+  teamSize           String?  @map("team_size")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -297,6 +298,7 @@ model Farm {
   tasks               Task[]
   waterConsumptions   WaterConsumption[]
   activities          Activity[]
+  documents           Document[]
   attendanceCodes     AttendanceCode?
   attendance          Attendance[]
   reportTemplates     ReportTemplate[]
@@ -363,11 +365,11 @@ model Field {
   createdAt                DateTime @default(now()) @map("created_at")
   updatedAt                DateTime @updatedAt @map("updated_at")
 
-  farm         Farm?         @relation(fields: [farmId], references: [id], onDelete: SetNull)
-  plots        Plot[]
-  facilities   Facility[]
-  animals      Animal[]
-  waterSources WaterSource[]
+  farm                Farm?                @relation(fields: [farmId], references: [id], onDelete: SetNull)
+  plots               Plot[]
+  facilities          Facility[]
+  animals             Animal[]
+  waterSources        WaterSource[]
   livestockGroups     LivestockGroup[]
   irrigationSchedules IrrigationSchedule[]
   rainfallEvents      RainfallEvent[]
@@ -394,9 +396,9 @@ model Plot {
   createdAt                DateTime @default(now()) @map("created_at")
   updatedAt                DateTime @updatedAt @map("updated_at")
 
-  field              Field             @relation(fields: [fieldId], references: [id], onDelete: Cascade)
-  cropCycles         CropCycle[]
-  grazingLocations   GrazingLocation[]
+  field                     Field                      @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+  cropCycles                CropCycle[]
+  grazingLocations          GrazingLocation[]
   plotsOnIrrigationSchedule PlotOnIrrigationSchedule[]
   rainfallEvents            RainfallEvent[]
   traceabilityRecords       TraceabilityRecord[]
@@ -442,25 +444,25 @@ model CropCycle {
   createdAt              DateTime  @default(now()) @map("created_at")
   updatedAt              DateTime  @updatedAt @map("updated_at")
 
-  crop   Crop     @relation(fields: [cropId], references: [id], onDelete: Cascade)
-  plot   Plot     @relation(fields: [plotId], references: [id], onDelete: Cascade)
-  tasks  Task[]
-  sales  CropSale[]
+  crop  Crop       @relation(fields: [cropId], references: [id], onDelete: Cascade)
+  plot  Plot       @relation(fields: [plotId], references: [id], onDelete: Cascade)
+  tasks Task[]
+  sales CropSale[]
 
   @@map("crop_cycles")
 }
 
 model CropSale {
-  id           String   @id @default(uuid())
-  cropCycleId  String   @map("crop_cycle_id")
-  harvestId    String?  @map("harvest_id")
-  date         DateTime @db.Date
-  quantity     Float
-  unit         String   @default("kg")
-  price        Float?
-  buyer        String?
-  notes        String?
-  createdAt    DateTime @default(now()) @map("created_at")
+  id          String   @id @default(uuid())
+  cropCycleId String   @map("crop_cycle_id")
+  harvestId   String?  @map("harvest_id")
+  date        DateTime @db.Date
+  quantity    Float
+  unit        String   @default("kg")
+  price       Float?
+  buyer       String?
+  notes       String?
+  createdAt   DateTime @default(now()) @map("created_at")
 
   cropCycle CropCycle @relation(fields: [cropCycleId], references: [id], onDelete: Cascade)
 
@@ -498,9 +500,9 @@ model GrazingLocation {
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
-  field           Field?           @relation(fields: [fieldId], references: [id], onDelete: SetNull)
-  plot            Plot?            @relation(fields: [plotId], references: [id], onDelete: SetNull)
-  livestockGroup  LivestockGroup?   @relation(fields: [livestockGroupId], references: [id], onDelete: SetNull)
+  field          Field?          @relation(fields: [fieldId], references: [id], onDelete: SetNull)
+  plot           Plot?           @relation(fields: [plotId], references: [id], onDelete: SetNull)
+  livestockGroup LivestockGroup? @relation(fields: [livestockGroupId], references: [id], onDelete: SetNull)
 
   @@map("grazing_locations")
 }
@@ -577,7 +579,7 @@ model TeamMember {
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
 
-  farm       Farm        @relation(fields: [farmId], references: [id])
+  farm       Farm         @relation(fields: [farmId], references: [id])
   attendance Attendance[]
 
   @@map("team_members")
@@ -616,26 +618,26 @@ model SprayRecord {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  farm    Farm   @relation(fields: [farmId], references: [id], onDelete: Cascade)
-  plot    Plot?  @relation(fields: [plotId], references: [id], onDelete: SetNull)
+  farm    Farm    @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  plot    Plot?   @relation(fields: [plotId], references: [id], onDelete: SetNull)
   product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
 
   @@map("spray_records")
 }
 
 model ScoutingRecord {
-  id               String    @id @default(uuid())
-  farmId           String    @map("farm_id")
-  plotId           String    @map("plot_id")
-  observationDate  DateTime  @db.Date @map("observation_date")
-  pestOrIssue      String    @map("pest_or_issue")
-  severity         String    @map("severity")
-  notes            String?
-  createdAt        DateTime  @default(now()) @map("created_at")
-  updatedAt        DateTime  @updatedAt @map("updated_at")
+  id              String   @id @default(uuid())
+  farmId          String   @map("farm_id")
+  plotId          String   @map("plot_id")
+  observationDate DateTime @map("observation_date") @db.Date
+  pestOrIssue     String   @map("pest_or_issue")
+  severity        String   @map("severity")
+  notes           String?
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
 
-  farm        Farm    @relation(fields: [farmId], references: [id], onDelete: Cascade)
-  plot        Plot    @relation(fields: [plotId], references: [id], onDelete: Cascade)
+  farm        Farm         @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  plot        Plot         @relation(fields: [plotId], references: [id], onDelete: Cascade)
   diagnostics Diagnostic[]
 
   @@map("scouting_records")
@@ -645,7 +647,7 @@ model Diagnostic {
   id               String    @id @default(uuid())
   scoutingRecordId String?   @map("scouting_record_id")
   animalId         String?   @map("animal_id")
-  diagnosisDate    DateTime? @db.Date @map("diagnosis_date")
+  diagnosisDate    DateTime? @map("diagnosis_date") @db.Date
   type             String
   severity         String?
   notes            String?
@@ -659,15 +661,15 @@ model Diagnostic {
 }
 
 model ReportTemplate {
-  id        String   @id @default(uuid())
-  farmId    String   @map("farm_id")
-  name      String
-  dataSource String  @map("data_source")
-  filters   Json
-  groupBy   String[] @default([]) @map("group_by")
-  columns   String[] @default([]) @map("columns")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id         String   @id @default(uuid())
+  farmId     String   @map("farm_id")
+  name       String
+  dataSource String   @map("data_source")
+  filters    Json
+  groupBy    String[] @default([]) @map("group_by")
+  columns    String[] @default([]) @map("columns")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
 
   farm Farm @relation(fields: [farmId], references: [id], onDelete: Cascade)
 
@@ -684,7 +686,7 @@ model Product {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  farm           Farm    @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  farm           Farm          @relation(fields: [farmId], references: [id], onDelete: Cascade)
   stockMovements Stock[]
   sprayRecords   SprayRecord[]
 
@@ -758,31 +760,31 @@ model Workflow {
 }
 
 model Task {
-  id                String    @id @default(uuid())
-  title              String
-  description        String?
-  status             String    @default("todo")
-  cropCycleId        String?   @map("crop_cycle_id")
-  workflowId         String?   @map("workflow_id")
-  workflowName       String?   @map("workflow_name")
-  cropCycleName      String?   @map("crop_cycle_name")
-  plotName           String?   @map("plot_name")
-  nodeId             String?   @map("node_id")
-  nodeType           String?   @map("node_type")
-  nodeData           Json?     @map("node_data")
-  conditionOptions   String[]  @default([]) @map("condition_options")
-  conditionAnswer    String?   @map("condition_answer")
-  nextNodeIdOnYes    String?   @map("next_node_id_on_yes")
-  nextNodeIdOnNo     String?   @map("next_node_id_on_no")
-  waitDays           Int?      @map("wait_days")
-  sourceType         String    @default("manual") @map("source_type")
-  stageIndex         Int?      @map("stage_index")
-  assignedTo         String?   @map("assigned_to")
-  dueDate            DateTime? @map("due_date")
-  priority           String?   @map("priority")
-  farmId             String    @map("farm_id")
-  createdAt          DateTime  @default(now()) @map("created_at")
-  updatedAt          DateTime  @updatedAt @map("updated_at")
+  id               String    @id @default(uuid())
+  title            String
+  description      String?
+  status           String    @default("todo")
+  cropCycleId      String?   @map("crop_cycle_id")
+  workflowId       String?   @map("workflow_id")
+  workflowName     String?   @map("workflow_name")
+  cropCycleName    String?   @map("crop_cycle_name")
+  plotName         String?   @map("plot_name")
+  nodeId           String?   @map("node_id")
+  nodeType         String?   @map("node_type")
+  nodeData         Json?     @map("node_data")
+  conditionOptions String[]  @default([]) @map("condition_options")
+  conditionAnswer  String?   @map("condition_answer")
+  nextNodeIdOnYes  String?   @map("next_node_id_on_yes")
+  nextNodeIdOnNo   String?   @map("next_node_id_on_no")
+  waitDays         Int?      @map("wait_days")
+  sourceType       String    @default("manual") @map("source_type")
+  stageIndex       Int?      @map("stage_index")
+  assignedTo       String?   @map("assigned_to")
+  dueDate          DateTime? @map("due_date")
+  priority         String?   @map("priority")
+  farmId           String    @map("farm_id")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
 
   farm      Farm       @relation(fields: [farmId], references: [id], onDelete: Cascade)
   cropCycle CropCycle? @relation(fields: [cropCycleId], references: [id], onDelete: Cascade)
@@ -825,7 +827,7 @@ model Attendance {
   id           String   @id @default(uuid())
   teamMemberId String   @map("team_member_id")
   farmId       String   @map("farm_id")
-  type         String   // "check_in" | "check_out"
+  type         String // "check_in" | "check_out"
   timestamp    DateTime @default(now())
   latitude     Float?
   longitude    Float?
@@ -847,6 +849,8 @@ model FarmCertification {
   issueDate       DateTime?           @map("issue_date")
   expiryDate      DateTime?           @map("expiry_date")
   certificateUrl  String?             @map("certificate_url")
+  file_url        String?             @map("file_url")
+  file_size       Int?                 @map("file_size")
   complianceScore Int                 @default(0) // 0-100 %
   createdAt       DateTime            @default(now()) @map("created_at")
   updatedAt       DateTime            @updatedAt @map("updated_at")
@@ -854,4 +858,19 @@ model FarmCertification {
   farm Farm @relation(fields: [farmId], references: [id], onDelete: Cascade)
 
   @@map("farm_certifications")
+}
+
+model Document {
+  id        String   @id @default(uuid())
+  name      String
+  url       String
+  size      Int
+  type      String
+  farmId    String   @map("farm_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  farm Farm @relation(fields: [farmId], references: [id], onDelete: Cascade)
+
+  @@map("documents")
 }

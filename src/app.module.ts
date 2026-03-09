@@ -25,6 +25,7 @@ import { UsersModule } from './users/users.module';
 import { ActivitiesModule } from './activities/activities.module';
 import { AttendanceModule } from './attendance/attendance.module';
 import { ReportsModule } from './reports/reports.module';
+import { DocumentosModule } from './documentos/documentos.module';
 
 @Module({
   imports: [
@@ -54,6 +55,7 @@ import { ReportsModule } from './reports/reports.module';
     WorkflowsModule,
     UsersModule,
     ReportsModule,
+    DocumentosModule,
   ],
 })
 export class AppModule {}
