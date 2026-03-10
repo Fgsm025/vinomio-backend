@@ -85,6 +85,14 @@ export class CropCyclesService {
     private readonly activitiesService: ActivitiesService,
   ) {}
 
+  private async getDefaultAssigneeForFarm(farmId: string): Promise<string | null> {
+    const owner = await this.prisma.userFarm.findFirst({
+      where: { farmId, role: 'OWNER' },
+      select: { userId: true },
+    });
+    return owner?.userId ?? null;
+  }
+
   private async resolveWorkflowName(cycle: {
     templateId?: string | null;
     workflowOption?: string | null;
@@ -233,6 +241,7 @@ export class CropCyclesService {
     const cycleDisplayName = cycle.name || `${cropName} - ${plotName}`.trim() || 'Ciclo';
 
     if (farmId && dto.workflowOption === 'template' && dto.templateId) {
+      const defaultAssignee = await this.getDefaultAssigneeForFarm(farmId);
       const workflow = await this.prisma.workflow.findUnique({
         where: { id: dto.templateId },
       });
@@ -240,7 +249,7 @@ export class CropCyclesService {
         const nodes = Array.isArray(workflow.nodes) ? (workflow.nodes as any[]) : [];
         const edges = Array.isArray(workflow.edges) ? (workflow.edges as any[]) : [];
         if (nodes.length > 0) {
-          const tasksToCreate = getAllTasksFromWorkflowTemplate(
+          const firstTask = getFirstTaskFromWorkflow(
             nodes,
             edges,
             cycle.id,
@@ -251,14 +260,20 @@ export class CropCyclesService {
             0,
             farmId,
           );
-          for (const taskPayload of tasksToCreate) {
-            await this.prisma.task.create({ data: taskPayload });
+          if (firstTask) {
+            await this.prisma.task.create({
+              data: {
+                ...firstTask,
+                ...(defaultAssignee && { assignedTo: defaultAssignee }),
+              },
+            });
           }
         }
       }
     }
 
     if (farmId && dto.workflowOption === 'stages' && dto.stages?.length > 0) {
+      const defaultAssignee = await this.getDefaultAssigneeForFarm(farmId);
       for (let i = 0; i < dto.stages.length; i++) {
         const stage = dto.stages[i];
         const workflowIds = [
@@ -293,7 +308,12 @@ export class CropCyclesService {
           );
 
           if (firstTask) {
-            await this.prisma.task.create({ data: firstTask });
+            await this.prisma.task.create({
+              data: {
+                ...firstTask,
+                ...(defaultAssignee && { assignedTo: defaultAssignee }),
+              },
+            });
           }
         }
       }
