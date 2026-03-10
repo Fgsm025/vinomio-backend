@@ -11,6 +11,8 @@ async function bootstrap() {
       process.env.FRONTEND_URL,
       'http://localhost:5001',
       'http://localhost:5173',
+      'https://www.cropai.es',
+      'https://cropai.es',
     ].filter(Boolean),
   );
 
