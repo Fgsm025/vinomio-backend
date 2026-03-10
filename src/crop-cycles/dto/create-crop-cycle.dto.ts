@@ -97,10 +97,6 @@ export class CreateCropCycleDto {
 
   @IsOptional()
   @IsString()
-  notes?: string;
-
-  @IsOptional()
-  @IsString()
   seedBatch?: string;
 
   @IsOptional()

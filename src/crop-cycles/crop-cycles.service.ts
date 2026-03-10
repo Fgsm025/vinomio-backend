@@ -202,7 +202,6 @@ export class CropCyclesService {
       ...(dto.workflowOption && { workflowOption: dto.workflowOption }),
       ...(dto.templateId && { templateId: dto.templateId }),
       ...(dto.stages && { stages: dto.stages }),
-      ...(dto.notes && { notes: dto.notes }),
       ...(dto.seedBatch && { seedBatch: dto.seedBatch }),
       ...(dto.nurseryOrigin && { nurseryOrigin: dto.nurseryOrigin }),
       ...(dto.supplier && { supplier: dto.supplier }),
