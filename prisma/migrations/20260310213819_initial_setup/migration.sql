@@ -190,6 +190,7 @@ CREATE TABLE "farms" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "slug" TEXT NOT NULL,
+    "documento_url" TEXT,
     "location" TEXT,
     "country" TEXT,
     "province" TEXT,
@@ -683,11 +684,27 @@ CREATE TABLE "farm_certifications" (
     "issue_date" TIMESTAMP(3),
     "expiry_date" TIMESTAMP(3),
     "certificate_url" TEXT,
+    "file_url" TEXT,
+    "file_size" INTEGER,
     "complianceScore" INTEGER NOT NULL DEFAULT 0,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "farm_certifications_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "documents" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "url" TEXT NOT NULL,
+    "size" INTEGER NOT NULL,
+    "type" TEXT NOT NULL,
+    "farm_id" TEXT NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "documents_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -872,3 +889,6 @@ ALTER TABLE "attendance" ADD CONSTRAINT "attendance_farm_id_fkey" FOREIGN KEY ("
 
 -- AddForeignKey
 ALTER TABLE "farm_certifications" ADD CONSTRAINT "farm_certifications_farm_id_fkey" FOREIGN KEY ("farm_id") REFERENCES "farms"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "documents" ADD CONSTRAINT "documents_farm_id_fkey" FOREIGN KEY ("farm_id") REFERENCES "farms"("id") ON DELETE CASCADE ON UPDATE CASCADE;
