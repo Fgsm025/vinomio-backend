@@ -155,6 +155,7 @@ model Crop {
   minTemperature                  Float?   @map("min_temperature")
   maxTemperature                  Float?   @map("max_temperature")
   waterRequirements               String?  @map("water_requirements")
+  preparationDays                 Int?     @map("preparation_days")
   plantingDays                    Int?     @map("planting_days")
   growingDays                     Int?     @map("growing_days")
   veraisonDays                    Int?     @map("veraison_days")

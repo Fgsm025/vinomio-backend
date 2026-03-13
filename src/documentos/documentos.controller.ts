@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, NotFoundException, Param, Patch, Post } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Controller('fincas')
@@ -31,5 +31,40 @@ export class DocumentosController {
     });
     const totalSize = documents.reduce((acc, doc) => acc + doc.size, 0);
     return { documents, totalSize };
+  }
+
+  @Patch(':fincaId/documentos/:id')
+  async updateDocumentName(
+    @Param('fincaId') fincaId: string,
+    @Param('id') id: string,
+    @Body() body: { name?: string },
+  ) {
+    if (!body.name || body.name.trim() === '') {
+      throw new NotFoundException('Nombre de documento inválido');
+    }
+
+    const document = await this.prisma.document.updateMany({
+      where: { id, farmId: fincaId },
+      data: { name: body.name.trim() },
+    });
+
+    if (document.count === 0) {
+      throw new NotFoundException('Documento no encontrado');
+    }
+
+    return { success: true };
+  }
+
+  @Delete(':fincaId/documentos/:id')
+  async deleteDocument(@Param('fincaId') fincaId: string, @Param('id') id: string) {
+    const result = await this.prisma.document.deleteMany({
+      where: { id, farmId: fincaId },
+    });
+
+    if (result.count === 0) {
+      throw new NotFoundException('Documento no encontrado');
+    }
+
+    return { success: true };
   }
 }

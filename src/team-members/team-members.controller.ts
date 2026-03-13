@@ -5,6 +5,7 @@ import { UpdateTeamMemberDto } from './dto/update-team-member.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { CurrentUserPayload } from '../auth/decorators/current-user.decorator';
+import { Role } from '../auth/decorators/roles.decorator';
 
 @Controller('team-members')
 export class TeamMembersController {
@@ -22,6 +23,19 @@ export class TeamMembersController {
       throw new Error('Farm context required (x-farm-id header)');
     }
     return this.teamMembersService.findFarmMembers(user.farmId);
+  }
+
+  @Put('farm-members/:userId/access-level')
+  @UseGuards(JwtAuthGuard)
+  updateMemberAccessLevel(
+    @CurrentUser() user: CurrentUserPayload,
+    @Param('userId', ParseUUIDPipe) userId: string,
+    @Body('role') role: Role,
+  ) {
+    if (!user.farmId) {
+      throw new Error('Farm context required (x-farm-id header)');
+    }
+    return this.teamMembersService.updateMemberAccessLevel(user.userId, user.farmId, userId, role);
   }
 
   @Get()

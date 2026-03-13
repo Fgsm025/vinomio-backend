@@ -36,7 +36,26 @@ export class TasksService {
     if (dto.nextNodeIdOnYes) data.nextNodeIdOnYes = dto.nextNodeIdOnYes;
     if (dto.nextNodeIdOnNo) data.nextNodeIdOnNo = dto.nextNodeIdOnNo;
     if (dto.waitDays) data.waitDays = dto.waitDays;
-    if (dto.stageIndex !== undefined) data.stageIndex = dto.stageIndex;
+    if (dto.stageIndex !== undefined) {
+      data.stageIndex = dto.stageIndex;
+    } else if (dto.cropCycleId) {
+      const cropCycle = await this.prisma.cropCycle.findUnique({
+        where: { id: dto.cropCycleId },
+      });
+      if (cropCycle) {
+        const stages = Array.isArray(cropCycle.stages) ? (cropCycle.stages as any[]) : [];
+        let resolvedStageIndex: number | undefined;
+        if (stages.length > 0 && cropCycle.currentStatus) {
+          const idx = stages.findIndex(
+            (s: any) => s?.stageType && String(s.stageType) === String(cropCycle.currentStatus),
+          );
+          resolvedStageIndex = idx >= 0 ? idx : 0;
+        } else {
+          resolvedStageIndex = 0;
+        }
+        data.stageIndex = resolvedStageIndex;
+      }
+    }
     if (dto.assignedTo) data.assignedTo = dto.assignedTo;
     if (dto.dueDate) data.dueDate = new Date(dto.dueDate);
 

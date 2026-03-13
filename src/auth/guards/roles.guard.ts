@@ -31,6 +31,35 @@ export class RolesGuard implements CanActivate {
       );
     }
 
+    // Extra operator restrictions: execution-only, no configuration/finance/team.
+    if (user.role === 'OPERATOR') {
+      const method = request.method as string;
+      const path: string = request.route?.path || '';
+      const controller = context.getClass().name;
+
+      // Block any access to purchases and invitations controllers entirely
+      if (controller === 'PurchasesController' || controller === 'InvitationsController') {
+        throw new ForbiddenException('Operators are not allowed to access this resource');
+      }
+
+      // Allow operators to create/update/complete tasks, attendance and related execution flows.
+      const isExecutionController =
+        controller === 'TasksController' || controller === 'AttendanceController';
+
+      if (isExecutionController) {
+        // For execution controllers, allow POST and PATCH, always allow safe GETs
+        if (method === 'POST' || method === 'PATCH' || method === 'GET') {
+          return true;
+        }
+        // Block destructive methods just in case
+        if (method === 'DELETE') {
+          throw new ForbiddenException(
+            'Operators are not allowed to delete resources in this module',
+          );
+        }
+      }
+    }
+
     return true;
   }
 }

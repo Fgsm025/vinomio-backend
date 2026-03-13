@@ -123,6 +123,10 @@ export class CreateCropDto {
 
   @IsOptional()
   @IsNumber()
+  preparationDays?: number;
+
+  @IsOptional()
+  @IsNumber()
   plantingDays?: number;
 
   @IsOptional()
