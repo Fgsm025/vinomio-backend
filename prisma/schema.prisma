@@ -248,15 +248,15 @@ model WaterConsumption {
 }
 
 model Farm {
-  id            String  @id @default(uuid())
-  name          String
-  slug          String  @unique
-  documentoUrl  String? @map("documento_url")
-  location  String?
-  country   String?
-  province  String?
-  latitude  Float?
-  longitude Float?
+  id           String  @id @default(uuid())
+  name         String
+  slug         String  @unique
+  documentoUrl String? @map("documento_url")
+  location     String?
+  country      String?
+  province     String?
+  latitude     Float?
+  longitude    Float?
 
   farmSize          Float?  @map("farm_size")
   primaryProduction String? @map("primary_production")
@@ -305,6 +305,7 @@ model Farm {
   reportTemplates     ReportTemplate[]
 
   certificationsLegacy String[] @default([]) @map("certifications")
+  modules              Json?
 
   @@map("farms")
 }
@@ -851,7 +852,7 @@ model FarmCertification {
   expiryDate      DateTime?           @map("expiry_date")
   certificateUrl  String?             @map("certificate_url")
   file_url        String?             @map("file_url")
-  file_size       Int?                 @map("file_size")
+  file_size       Int?                @map("file_size")
   complianceScore Int                 @default(0) // 0-100 %
   createdAt       DateTime            @default(now()) @map("created_at")
   updatedAt       DateTime            @updatedAt @map("updated_at")
