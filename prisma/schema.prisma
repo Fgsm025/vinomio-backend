@@ -145,6 +145,7 @@ model Crop {
   betweenRows                     Float?   @map("between_rows")
   onRow                           Float?   @map("on_row")
   plantDensity                    Float?   @map("plant_density")
+  estimatedWeightPerPlant         Float?   @map("estimated_weight_per_plant")
   isPermanentCrop                 Boolean  @default(false) @map("is_permanent_crop")
   image                           Json?
   scientificName                  String?  @map("scientific_name")
@@ -152,6 +153,7 @@ model Crop {
   harvestType                     String?  @map("harvest_type")
   estimatedYieldPerHa             Float?   @map("estimated_yield_per_ha")
   yieldUnit                       String?  @map("yield_unit")
+  yieldCalculationMode            String?  @map("yield_calculation_mode")
   minTemperature                  Float?   @map("min_temperature")
   maxTemperature                  Float?   @map("max_temperature")
   waterRequirements               String?  @map("water_requirements")
