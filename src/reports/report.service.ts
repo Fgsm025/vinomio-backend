@@ -19,11 +19,31 @@ export enum ReportDataSource {
   SECTORS = 'SECTORS',
 }
 
+export type ReportDateRange = {
+  from?: string | Date;
+  to?: string | Date;
+};
+
 export interface ReportQuery {
   farmId: string;
   dataSource: ReportDataSource;
   filters?: Record<string, any>;
   groupBy?: string[];
+  dateRange?: ReportDateRange;
+  /**
+   * Prisma field name to apply the date range to.
+   * If omitted, we fall back to an internal map based on `dataSource`.
+   */
+  dateField?: string;
+}
+
+export interface ReportTemplateCreateInput {
+  farmId: string;
+  name: string;
+  dataSource: ReportDataSource;
+  filters: Record<string, any>;
+  groupBy?: string[];
+  columns?: string[];
 }
 
 type PrismaDelegate = {
@@ -252,11 +272,55 @@ const REPORT_CONFIG: Record<ReportDataSource, ReportConfig> = {
   },
 };
 
+const DATE_FIELD_MAP: Partial<Record<ReportDataSource, string>> = {
+  [ReportDataSource.CROP_CYCLES]: 'plantingDate',
+  [ReportDataSource.CROP_SALES]: 'date',
+  [ReportDataSource.ANIMALS]: 'birthDate',
+  [ReportDataSource.SPRAY_RECORDS]: 'date',
+  [ReportDataSource.SCOUTING_RECORDS]: 'observationDate',
+  [ReportDataSource.DIAGNOSTICS]: 'diagnosisDate',
+  [ReportDataSource.WATER_CONSUMPTION]: 'analysisDate',
+  [ReportDataSource.PURCHASES]: 'date',
+};
+
 @Injectable()
 export class ReportService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async query({ farmId, dataSource, filters, groupBy }: ReportQuery): Promise<any[]> {
+  async getTemplates(farmId: string) {
+    return this.prisma.reportTemplate.findMany({
+      where: { farmId },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async createTemplate({
+    farmId,
+    name,
+    dataSource,
+    filters,
+    groupBy = [],
+    columns = [],
+  }: ReportTemplateCreateInput) {
+    return this.prisma.reportTemplate.create({
+      data: {
+        farmId,
+        name,
+        dataSource,
+        filters: filters ?? {},
+        groupBy,
+        columns,
+      },
+    });
+  }
+
+  async deleteTemplate(id: string) {
+    return this.prisma.reportTemplate.delete({
+      where: { id },
+    });
+  }
+
+  async query({ farmId, dataSource, filters, groupBy, dateRange, dateField }: ReportQuery): Promise<any[]> {
     const config = REPORT_CONFIG[dataSource];
     if (!config) {
       throw new Error(`Unsupported data source: ${dataSource}`);
@@ -264,6 +328,21 @@ export class ReportService {
 
     const delegate = config.delegate(this.prisma);
     const where = config.where(farmId, filters);
+
+    const activeDateField = dateField ?? DATE_FIELD_MAP[dataSource];
+    const hasFrom = Boolean(dateRange?.from);
+    const hasTo = Boolean(dateRange?.to);
+    const hasDateRange = Boolean(activeDateField && (hasFrom || hasTo));
+
+    const whereWithDate = hasDateRange
+      ? {
+          ...where,
+          [activeDateField as string]: {
+            ...(hasFrom ? { gte: new Date(dateRange!.from as any) } : {}),
+            ...(hasTo ? { lte: new Date(dateRange!.to as any) } : {}),
+          },
+        }
+      : where;
 
     if (groupBy && groupBy.length > 0 && 'groupBy' in delegate && typeof delegate.groupBy === 'function') {
       const numericFields = config.numericFields ?? [];
@@ -277,7 +356,7 @@ export class ReportService {
 
       return (delegate as any).groupBy({
         by: groupBy as Prisma.Enumerable<any>,
-        where,
+        where: whereWithDate,
         _count: { _all: true },
         ...(Object.keys(_sum).length > 0 && { _sum }),
         ...(Object.keys(_avg).length > 0 && { _avg }),
@@ -285,7 +364,7 @@ export class ReportService {
     }
 
     return delegate.findMany({
-      where,
+      where: whereWithDate,
       ...(config.include && { include: config.include }),
     });
   }
