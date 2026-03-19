@@ -7,12 +7,15 @@ import {
   Body,
   Param,
   ParseUUIDPipe,
+  UseGuards,
 } from '@nestjs/common';
 import { FacilitiesService } from './facilities.service';
 import { CreateFacilityDto } from './dto/create-facility.dto';
 import { UpdateFacilityDto } from './dto/update-facility.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @Controller('facilities')
+@UseGuards(JwtAuthGuard)
 export class FacilitiesController {
   constructor(private readonly facilitiesService: FacilitiesService) {}
 

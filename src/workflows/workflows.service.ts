@@ -1,14 +1,18 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateWorkflowDto } from './dto/create-workflow.dto';
 import { UpdateWorkflowDto } from './dto/update-workflow.dto';
+import { getPrismaFarmId } from '../prisma/prisma-farm-context';
 
 @Injectable()
 export class WorkflowsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(dto: CreateWorkflowDto) {
+    const farmId = getPrismaFarmId();
+    if (!farmId) throw new UnauthorizedException('Missing farm context');
+
     return this.prisma.workflow.create({
       data: {
         name: dto.name,
@@ -16,20 +20,16 @@ export class WorkflowsService {
         nodes: dto.nodes as object,
         edges: dto.edges as object,
         isTemplate: dto.isTemplate ?? false,
-        farmId: dto.farmId,
+        // farmId is injected from the authenticated farm context (JWT)
+        farmId,
       },
     });
   }
 
-  async findAll(farmId?: string, isTemplate?: boolean) {
+  async findAll(_farmId?: string, isTemplate?: boolean) {
     let where: Prisma.WorkflowWhereInput | undefined;
-    if (isTemplate === true) {
-      where = {
-        isTemplate: true,
-        ...(farmId ? { OR: [{ farmId }, { farmId: null }] } : {}),
-      };
-    } else if (farmId) {
-      where = { OR: [{ farmId }, { isTemplate: true, farmId: null }] };
+    if (isTemplate !== undefined) {
+      where = { isTemplate };
     }
     return this.prisma.workflow.findMany({
       where,
@@ -57,7 +57,7 @@ export class WorkflowsService {
         ...(dto.nodes !== undefined && { nodes: dto.nodes as object }),
         ...(dto.edges !== undefined && { edges: dto.edges as object }),
         ...(dto.isTemplate !== undefined && { isTemplate: dto.isTemplate }),
-        ...(dto.farmId !== undefined && { farmId: dto.farmId }),
+        // farmId is tenant-owned; don't allow changing it from the client payload.
       },
     });
   }

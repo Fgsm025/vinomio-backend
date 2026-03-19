@@ -1,14 +1,20 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateFacilityDto } from './dto/create-facility.dto';
 import { UpdateFacilityDto } from './dto/update-facility.dto';
+import { getPrismaFarmId } from '../prisma/prisma-farm-context';
 
 @Injectable()
 export class FacilitiesService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(dto: CreateFacilityDto) {
-    return this.prisma.facility.create({ data: dto });
+    const farmId = getPrismaFarmId();
+    if (!farmId) throw new UnauthorizedException('Missing farm context');
+
+    const { fieldId, ...rest } = dto;
+    const data: any = { ...rest, farmId, ...(fieldId !== undefined ? { fieldId } : {}) };
+    return this.prisma.facility.create({ data });
   }
 
   async findAll() {

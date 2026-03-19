@@ -37,6 +37,7 @@ CREATE TABLE "facilities" (
     "longitude" DOUBLE PRECISION,
     "tenure_regime" TEXT,
     "field_id" TEXT,
+    "farm_id" TEXT NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
@@ -91,6 +92,7 @@ CREATE TABLE "crops" (
     "between_rows" DOUBLE PRECISION,
     "on_row" DOUBLE PRECISION,
     "plant_density" DOUBLE PRECISION,
+    "estimated_weight_per_plant" DOUBLE PRECISION,
     "is_permanent_crop" BOOLEAN NOT NULL DEFAULT false,
     "image" JSONB,
     "scientific_name" TEXT,
@@ -98,9 +100,11 @@ CREATE TABLE "crops" (
     "harvest_type" TEXT,
     "estimated_yield_per_ha" DOUBLE PRECISION,
     "yield_unit" TEXT,
+    "yield_calculation_mode" TEXT,
     "min_temperature" DOUBLE PRECISION,
     "max_temperature" DOUBLE PRECISION,
     "water_requirements" TEXT,
+    "preparation_days" INTEGER,
     "planting_days" INTEGER,
     "growing_days" INTEGER,
     "veraison_days" INTEGER,
@@ -115,6 +119,7 @@ CREATE TABLE "crops" (
     "extraction_frequency_days" INTEGER,
     "productive_years" INTEGER,
     "harvests_per_year" INTEGER,
+    "farm_id" TEXT NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
@@ -165,6 +170,7 @@ CREATE TABLE "water_sources" (
     "description" TEXT,
     "distance_to_farm" DOUBLE PRECISION,
     "field_id" TEXT,
+    "farm_id" TEXT NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
@@ -198,7 +204,7 @@ CREATE TABLE "farms" (
     "longitude" DOUBLE PRECISION,
     "farm_size" DOUBLE PRECISION,
     "primary_production" TEXT,
-    "irrigation_system" TEXT,
+    "irrigation_system" TEXT[] DEFAULT ARRAY[]::TEXT[],
     "has_frost" BOOLEAN NOT NULL DEFAULT false,
     "frost_months" TEXT[] DEFAULT ARRAY[]::TEXT[],
     "rainy_months" TEXT[] DEFAULT ARRAY[]::TEXT[],
@@ -213,6 +219,7 @@ CREATE TABLE "farms" (
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
     "certifications" TEXT[] DEFAULT ARRAY[]::TEXT[],
+    "modules" JSONB,
 
     CONSTRAINT "farms_pkey" PRIMARY KEY ("id")
 );
@@ -594,7 +601,7 @@ CREATE TABLE "workflows" (
     "nodes" JSONB NOT NULL,
     "edges" JSONB NOT NULL,
     "is_template" BOOLEAN NOT NULL DEFAULT false,
-    "farm_id" TEXT,
+    "farm_id" TEXT NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
@@ -738,7 +745,13 @@ CREATE INDEX "attendance_team_member_id_timestamp_idx" ON "attendance"("team_mem
 ALTER TABLE "facilities" ADD CONSTRAINT "facilities_field_id_fkey" FOREIGN KEY ("field_id") REFERENCES "fields"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "facilities" ADD CONSTRAINT "facilities_farm_id_fkey" FOREIGN KEY ("farm_id") REFERENCES "farms"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "machinery" ADD CONSTRAINT "machinery_farm_id_fkey" FOREIGN KEY ("farm_id") REFERENCES "farms"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "crops" ADD CONSTRAINT "crops_farm_id_fkey" FOREIGN KEY ("farm_id") REFERENCES "farms"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "animals" ADD CONSTRAINT "animals_farm_id_fkey" FOREIGN KEY ("farm_id") REFERENCES "farms"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -748,6 +761,9 @@ ALTER TABLE "animals" ADD CONSTRAINT "animals_field_id_fkey" FOREIGN KEY ("field
 
 -- AddForeignKey
 ALTER TABLE "water_sources" ADD CONSTRAINT "water_sources_field_id_fkey" FOREIGN KEY ("field_id") REFERENCES "fields"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "water_sources" ADD CONSTRAINT "water_sources_farm_id_fkey" FOREIGN KEY ("farm_id") REFERENCES "farms"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "water_consumptions" ADD CONSTRAINT "water_consumptions_farm_id_fkey" FOREIGN KEY ("farm_id") REFERENCES "farms"("id") ON DELETE CASCADE ON UPDATE CASCADE;

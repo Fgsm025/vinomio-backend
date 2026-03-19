@@ -89,10 +89,12 @@ model Facility {
   longitude          Float?
   tenureRegime       String?  @map("tenure_regime")
   fieldId            String?  @map("field_id")
+  farmId             String   @map("farm_id")
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
 
   field Field? @relation(fields: [fieldId], references: [id], onDelete: SetNull)
+  farm  Farm   @relation(fields: [farmId], references: [id], onDelete: Cascade)
 
   @@map("facilities")
 }
@@ -172,10 +174,13 @@ model Crop {
   extractionFrequencyDays         Int?     @map("extraction_frequency_days")
   productiveYears                 Int?     @map("productive_years")
   harvestsPerYear                 Int?     @map("harvests_per_year")
+  farmId                          String   @map("farm_id")
   createdAt                       DateTime @default(now()) @map("created_at")
   updatedAt                       DateTime @updatedAt @map("updated_at")
 
   cropCycles CropCycle[]
+
+  farm Farm  @relation(fields: [farmId], references: [id], onDelete: Cascade)
 
   @@map("crops")
 }
@@ -226,10 +231,12 @@ model WaterSource {
   description    String?
   distanceToFarm Float?   @map("distance_to_farm")
   fieldId        String?  @map("field_id")
+  farmId         String   @map("farm_id")
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
   field Field? @relation(fields: [fieldId], references: [id], onDelete: SetNull)
+  farm  Farm   @relation(fields: [farmId], references: [id], onDelete: Cascade)
 
   @@map("water_sources")
 }
@@ -263,7 +270,7 @@ model Farm {
   farmSize          Float?  @map("farm_size")
   primaryProduction String? @map("primary_production")
 
-  irrigationSystem String? @map("irrigation_system")
+  irrigationSystem String[] @default([]) @map("irrigation_system")
 
   hasFrost       Boolean  @default(false) @map("has_frost")
   frostMonths    String[] @default([]) @map("frost_months")
@@ -287,6 +294,8 @@ model Farm {
   users               UserFarm[]
   invitations         Invitation[]
   fields              Field[]
+  facilities         Facility[]
+  waterSources       WaterSource[]
   machinery           Machinery[]
   animals             Animal[]
   sprayRecords        SprayRecord[]
@@ -298,6 +307,7 @@ model Farm {
   stockMovements      Stock[]
   purchases           Purchase[]
   workflows           Workflow[]
+  crops               Crop[]
   tasks               Task[]
   waterConsumptions   WaterConsumption[]
   activities          Activity[]
@@ -753,11 +763,11 @@ model Workflow {
   nodes       Json
   edges       Json
   isTemplate  Boolean  @default(false) @map("is_template")
-  farmId      String?  @map("farm_id")
+  farmId      String   @map("farm_id")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  farm  Farm?  @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  farm  Farm   @relation(fields: [farmId], references: [id], onDelete: Cascade)
   tasks Task[]
 
   @@map("workflows")

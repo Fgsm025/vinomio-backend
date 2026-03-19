@@ -1,10 +1,12 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, ParseUUIDPipe } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, ParseUUIDPipe, UseGuards } from '@nestjs/common';
 import { CropCyclesService } from './crop-cycles.service';
 import { CreateCropCycleDto } from './dto/create-crop-cycle.dto';
 import { CreateMultipleCropCyclesDto } from './dto/create-multiple-crop-cycles.dto';
 import { UpdateCropCycleDto } from './dto/update-crop-cycle.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @Controller('crop-cycles')
+@UseGuards(JwtAuthGuard)
 export class CropCyclesController {
   constructor(private readonly cropCyclesService: CropCyclesService) {}
 
