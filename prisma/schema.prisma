@@ -692,6 +692,7 @@ model Product {
   category    String?
   unit        String?  @default("unit")
   description String?
+  minimumStock Int     @default(0) @map("minimum_stock")
   farmId      String   @map("farm_id")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
