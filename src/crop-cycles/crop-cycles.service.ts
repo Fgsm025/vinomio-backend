@@ -235,7 +235,7 @@ export class CropCyclesService {
     }
 
     const farmId = cycle.plot?.field?.farmId;
-    const cropName = cycle.crop?.product || cycle.crop?.nameOrDescription || '';
+    const cropName = cycle.crop?.product || '';
     const plotName = cycle.plot?.name || '';
     const cycleDisplayName = cycle.name || `${cropName} - ${plotName}`.trim() || 'Ciclo';
 
@@ -516,7 +516,7 @@ export class CropCyclesService {
     });
 
     const farmId = cycle.plot?.field?.farmId;
-    const cropName = cycle.crop?.product || cycle.crop?.nameOrDescription || 'Crop';
+    const cropName = cycle.crop?.product || 'Crop';
     const plotName = cycle.plot?.name || 'Plot';
     if (
       farmId &&

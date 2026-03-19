@@ -15,27 +15,6 @@ export class CreateCropDto {
 
   @IsOptional()
   @IsString()
-  variety?: string;
-
-  @IsOptional()
-  @IsString()
-  nameOrDescription?: string;
-
-  @IsOptional()
-  @IsString()
-  @IsIn(['irrigation', 'rainfed'])
-  exploitationSystem?: string;
-
-  @IsOptional()
-  @IsString()
-  cropSystem?: string;
-
-  @IsOptional()
-  @IsString()
-  ecologicalProductionCertificate?: string;
-
-  @IsOptional()
-  @IsString()
   cropDestination?: string;
 
   @IsOptional()
@@ -44,20 +23,12 @@ export class CreateCropDto {
   cropDestinations?: string[];
 
   @IsOptional()
-  @IsString()
-  soilCoverage?: string;
-
-  @IsOptional()
   @IsBoolean()
   integratedProduction?: boolean;
 
   @IsOptional()
   @IsString()
   reproductionPlantMaterial?: string;
-
-  @IsOptional()
-  @IsString()
-  typeDetail?: string;
 
   @IsOptional()
   @IsNumber()
@@ -151,7 +122,7 @@ export class CreateCropDto {
 
   @IsOptional()
   @IsString()
-  @IsIn(['traditional', 'mother-plant', 'livestock-breeder', 'permanent-crop'])
+  @IsIn(['traditional', 'mother-plant', 'permanent-crop'])
   productionType?: string;
 
   @IsOptional()

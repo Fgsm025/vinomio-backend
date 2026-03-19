@@ -129,19 +129,15 @@ model Machinery {
 model Crop {
   id                              String   @id @default(uuid())
   product                         String
-  variety                         String?
   nameOrDescription               String?  @map("name_or_description")
   exploitationSystem              String?  @map("exploitation_system")
   agriculturalActivity            String?  @map("agricultural_activity")
-  cropSystem                      String?  @map("crop_system")
   ecologicalProductionCertificate String?  @map("ecological_production_certificate")
   cropDestination                 String?  @map("crop_destination")
   cropDestinations                String[] @default([]) @map("crop_destinations")
   qualityRegimes                  String[] @default([]) @map("quality_regimes")
-  soilCoverage                    String?  @map("soil_coverage")
   integratedProduction            Boolean  @default(false) @map("integrated_production")
   reproductionPlantMaterial       String?  @map("reproduction_plant_material")
-  typeDetail                      String?  @map("type_detail")
   horizontalPlantingFrame         Float?   @map("horizontal_planting_frame")
   verticalPlantingFrame           Float?   @map("vertical_planting_frame")
   betweenRows                     Float?   @map("between_rows")
