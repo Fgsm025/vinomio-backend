@@ -27,10 +27,6 @@ export class CreateCropCycleDto {
   @IsNotEmpty()
   cropId: string;
 
-  @IsOptional()
-  @IsString()
-  variety?: string;
-
   @IsString()
   @IsNotEmpty()
   plotId: string;

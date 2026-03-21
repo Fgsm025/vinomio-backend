@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActivitiesService } from '../activities/activities.service';
+import { FarmTransactionsService } from '../farm-transactions/farm-transactions.service';
 import { CreatePurchaseDto } from './dto/create-purchase.dto';
 import { UpdatePurchaseDto } from './dto/update-purchase.dto';
 
@@ -9,6 +10,7 @@ export class PurchasesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly activitiesService: ActivitiesService,
+    private readonly farmTransactionsService: FarmTransactionsService,
   ) {}
 
   async create(createPurchaseDto: CreatePurchaseDto, farmId: string) {
@@ -37,7 +39,9 @@ export class PurchasesService {
         supplierId: purchase.supplierId,
       },
     });
-    
+
+    await this.farmTransactionsService.syncFromPurchase(purchase);
+
     return purchase;
   }
 
@@ -46,7 +50,7 @@ export class PurchasesService {
       where: { farmId },
       include: {
         supplier: true,
-        stock: true,
+        supplyStockMovement: true,
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -60,7 +64,7 @@ export class PurchasesService {
       },
       include: {
         supplier: true,
-        stock: true,
+        supplyStockMovement: true,
       },
     });
 
@@ -74,17 +78,25 @@ export class PurchasesService {
   async update(id: string, updatePurchaseDto: UpdatePurchaseDto, farmId: string) {
     await this.findOne(id, farmId);
 
-    return this.prisma.purchase.update({
+    const updated = await this.prisma.purchase.update({
       where: { id },
       data: {
         ...updatePurchaseDto,
         date: updatePurchaseDto.date ? new Date(updatePurchaseDto.date) : undefined,
       },
+      include: {
+        supplier: true,
+      },
     });
+
+    await this.farmTransactionsService.syncFromPurchase(updated);
+
+    return updated;
   }
 
   async remove(id: string, farmId: string) {
     await this.findOne(id, farmId);
+    await this.farmTransactionsService.deletePurchaseLedger(id);
     return this.prisma.purchase.delete({ where: { id } });
   }
 }

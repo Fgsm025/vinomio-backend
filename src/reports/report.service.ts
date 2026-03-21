@@ -234,7 +234,7 @@ const REPORT_CONFIG: Record<ReportDataSource, ReportConfig> = {
     numericFields: ['total'],
   },
   [ReportDataSource.PRODUCTS]: {
-    delegate: (prisma) => prisma.product,
+    delegate: (prisma) => prisma.supply,
     where: (farmId, filters) => (filters ? { farmId, ...filters } : { farmId }),
     include: {
       farm: true,

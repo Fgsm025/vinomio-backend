@@ -19,7 +19,7 @@ import type { CurrentUserPayload } from '../auth/decorators/current-user.decorat
 
 @Controller('purchases')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(Role.OWNER, Role.FINANCE)
+@Roles(Role.OWNER, Role.ADMIN, Role.FINANCE, Role.AGRONOMIST)
 export class PurchasesController {
   constructor(private readonly purchasesService: PurchasesService) {}
 

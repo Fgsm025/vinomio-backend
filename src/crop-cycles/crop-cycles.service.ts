@@ -190,7 +190,6 @@ export class CropCyclesService {
       plantingDate,
       currentStatus: dto.currentStatus,
       ...(dto.name && { name: dto.name }),
-      ...(dto.variety && { variety: dto.variety }),
       ...(dto.region && { region: dto.region }),
       ...(dto.endDate && { endDate: new Date(dto.endDate) }),
       ...(dto.endReason && { endReason: dto.endReason }),
@@ -415,6 +414,7 @@ export class CropCyclesService {
         crop: true,
         plot: { include: { field: true } },
         tasks: { orderBy: { createdAt: 'asc' } },
+        sales: { orderBy: { date: 'desc' } },
       },
     });
     const enriched = list.map(enrichCycle);
@@ -433,6 +433,7 @@ export class CropCyclesService {
         crop: true,
         plot: { include: { field: true } },
         tasks: { orderBy: { createdAt: 'asc' } },
+        sales: { orderBy: { date: 'desc' } },
       },
     });
     const enriched = list.map(enrichCycle);
@@ -450,6 +451,7 @@ export class CropCyclesService {
         crop: true,
         plot: { include: { field: true } },
         tasks: { orderBy: { createdAt: 'asc' } },
+        sales: { orderBy: { date: 'desc' } },
       },
     });
     if (!cropCycle) {

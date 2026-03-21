@@ -14,6 +14,10 @@ export class CreateSupplierDto {
   email?: string;
 
   @IsOptional()
+  @IsString()
+  country?: string;
+
+  @IsOptional()
   @IsIn(['active', 'inactive'])
   status?: 'active' | 'inactive';
 }

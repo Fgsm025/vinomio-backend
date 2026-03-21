@@ -27,6 +27,9 @@ import { AttendanceModule } from './attendance/attendance.module';
 import { ReportsModule } from './reports/reports.module';
 import { DocumentosModule } from './documentos/documentos.module';
 import { SuppliersModule } from './suppliers/suppliers.module';
+import { SuppliesModule } from './supplies/supplies.module';
+import { ProductionStockModule } from './production-stock/production-stock.module';
+import { FarmTransactionsModule } from './farm-transactions/farm-transactions.module';
 
 @Module({
   imports: [
@@ -58,6 +61,9 @@ import { SuppliersModule } from './suppliers/suppliers.module';
     ReportsModule,
     DocumentosModule,
     SuppliersModule,
+    SuppliesModule,
+    ProductionStockModule,
+    FarmTransactionsModule,
   ],
 })
 export class AppModule {}
