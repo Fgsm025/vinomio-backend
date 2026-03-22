@@ -186,6 +186,7 @@ const REPORT_CONFIG: Record<ReportDataSource, ReportConfig> = {
     where: (farmId, filters) => (filters ? { farmId, ...filters } : { farmId }),
     include: {
       farm: true,
+      field: true,
       plot: {
         include: {
           field: true,
@@ -195,19 +196,14 @@ const REPORT_CONFIG: Record<ReportDataSource, ReportConfig> = {
   },
   [ReportDataSource.DIAGNOSTICS]: {
     delegate: (prisma) => prisma.diagnostic,
-    where: (farmId, filters) =>
-      filters
-        ? {
-            OR: [{ animal: { farmId } }, { scoutingRecord: { farmId } }],
-            ...filters,
-          }
-        : {
-            OR: [{ animal: { farmId } }, { scoutingRecord: { farmId } }],
-          },
+    where: (farmId, filters) => (filters ? { farmId, ...filters } : { farmId }),
     include: {
+      farm: true,
+      field: true,
       animal: true,
       scoutingRecord: {
         include: {
+          field: true,
           plot: {
             include: {
               field: true,

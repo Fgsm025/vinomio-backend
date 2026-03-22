@@ -307,7 +307,11 @@ model Farm {
   animals             Animal[]
   sprayRecords        SprayRecord[]
   scoutingRecords     ScoutingRecord[]
+  diagnostics         Diagnostic[]
   teamMembers         TeamMember[]
+  professionals       Professional[]
+  clients             Client[]
+  pipelineDeals       PipelineDeal[]
   traceabilityRecords TraceabilityRecord[]
   supplies            Supply[]
   suppliers           Supplier[]
@@ -399,6 +403,8 @@ model Field {
   traceabilityRecords TraceabilityRecord[]
   grazingLocations    GrazingLocation[]
   farmTransactions    FarmTransaction[]
+  scoutingRecords       ScoutingRecord[]
+  diagnostics           Diagnostic[]
 
   @@map("fields")
 }
@@ -608,6 +614,82 @@ model TeamMember {
   @@map("team_members")
 }
 
+model Professional {
+  id         String   @id @default(uuid())
+  farmId     String   @map("farm_id")
+  name       String
+  role       String
+  phone      String?
+  email      String?
+  company    String?
+  notes      String?
+  rateType   String?  @map("rate_type")
+  rateAmount Float?   @map("rate_amount")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  farm Farm @relation(fields: [farmId], references: [id], onDelete: Cascade)
+
+  @@index([farmId])
+  @@map("professionals")
+}
+
+model Client {
+  id           String   @id @default(uuid())
+  farmId       String   @map("farm_id")
+  name         String
+  company      String?
+  email        String
+  phone        String
+  address      String?
+  city         String?
+  state        String?
+  postalCode   String?  @map("postal_code")
+  country      String?
+  taxId        String?  @map("tax_id")
+  paymentTerms String?  @map("payment_terms")
+  creditLimit  Float?   @map("credit_limit")
+  status       String
+  notes        String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  farm Farm @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  pipelineDeals PipelineDeal[]
+
+  @@index([farmId])
+  @@map("clients")
+}
+
+/// CRM sale pipeline card (one row per deal / tarjeta)
+model PipelineDeal {
+  id            String   @id @default(uuid())
+  farmId        String   @map("farm_id")
+  stage         String
+  sortOrder     Int      @default(0) @map("sort_order")
+  name          String
+  description   String?
+  amount        Float
+  quantity      Float?
+  productId     String?  @map("product_id")
+  priority      String
+  progress      Int      @default(0)
+  clientId      String?  @map("client_id")
+  createDate    DateTime @map("create_date")
+  closeDate     DateTime @map("close_date")
+  lastUpdate    DateTime @map("last_update")
+  owner         Json
+  client        Json
+  company       Json
+  collaborators Json
+
+  farm        Farm    @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  clientRef   Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  @@index([farmId, stage])
+  @@map("pipeline_deals")
+}
+
 model TraceabilityRecord {
   id              String   @id @default(uuid())
   productId       String   @map("product_id")
@@ -649,36 +731,60 @@ model SprayRecord {
 }
 
 model ScoutingRecord {
-  id              String   @id @default(uuid())
-  farmId          String   @map("farm_id")
-  plotId          String   @map("plot_id")
-  observationDate DateTime @map("observation_date") @db.Date
-  pestOrIssue     String   @map("pest_or_issue")
-  severity        String   @map("severity")
-  notes           String?
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  id                     String   @id @default(uuid())
+  farmId                 String   @map("farm_id")
+  fieldId                String   @map("field_id")
+  plotId                 String?  @map("plot_id")
+  observationDate        DateTime @map("observation_date") @db.Date
+  responsible            String
+  observations           String   @default("")
+  healthStatus           String   @map("health_status")
+  pestDetected           Boolean  @default(false) @map("pest_detected")
+  diseaseDetected        Boolean  @default(false) @map("disease_detected")
+  severityLevel          String   @map("severity_level")
+  affectedAreaPercentage Float    @map("affected_area_percentage")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   farm        Farm         @relation(fields: [farmId], references: [id], onDelete: Cascade)
-  plot        Plot         @relation(fields: [plotId], references: [id], onDelete: Cascade)
+  field       Field        @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+  plot        Plot?        @relation(fields: [plotId], references: [id], onDelete: SetNull)
   diagnostics Diagnostic[]
 
   @@map("scouting_records")
 }
 
 model Diagnostic {
-  id               String    @id @default(uuid())
-  scoutingRecordId String?   @map("scouting_record_id")
-  animalId         String?   @map("animal_id")
-  diagnosisDate    DateTime? @map("diagnosis_date") @db.Date
-  type             String
-  severity         String?
-  notes            String?
-  createdAt        DateTime  @default(now()) @map("created_at")
-  updatedAt        DateTime  @updatedAt @map("updated_at")
+  id                     String   @id @default(uuid())
+  farmId                 String   @map("farm_id")
+  fieldId                String   @map("field_id")
+  scoutingRecordId       String?  @map("scouting_record_id")
+  animalId               String?  @map("animal_id")
+  origin                 String
+  diagnosisDate          DateTime @map("diagnosis_date") @db.Date
+  problemType            String   @map("problem_type")
+  problemIdentified      String   @map("problem_identified")
+  symptoms               String
+  severity               String
+  affectedAreaPercentage Float    @map("affected_area_percentage")
+  photos                 Json     @default("[]")
+  possibleCause          String   @map("possible_cause")
+  contributingFactors    Json     @map("contributing_factors")
+  cropStage              String?  @map("crop_stage")
+  treatmentStrategy      String   @map("treatment_strategy")
+  recommendedProducts    Json     @map("recommended_products")
+  additionalInstructions String?  @map("additional_instructions")
+  estimatedCost          Float?   @map("estimated_cost")
+  status                 String
 
-  scoutingRecord ScoutingRecord? @relation(fields: [scoutingRecordId], references: [id], onDelete: SetNull)
-  animal         Animal?         @relation(fields: [animalId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  farm           Farm             @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  field          Field            @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+  scoutingRecord ScoutingRecord?  @relation(fields: [scoutingRecordId], references: [id], onDelete: SetNull)
+  animal         Animal?          @relation(fields: [animalId], references: [id], onDelete: SetNull)
 
   @@map("diagnostics")
 }

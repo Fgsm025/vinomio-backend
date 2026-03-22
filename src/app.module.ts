@@ -30,6 +30,11 @@ import { SuppliersModule } from './suppliers/suppliers.module';
 import { SuppliesModule } from './supplies/supplies.module';
 import { ProductionStockModule } from './production-stock/production-stock.module';
 import { FarmTransactionsModule } from './farm-transactions/farm-transactions.module';
+import { ProfessionalsModule } from './professionals/professionals.module';
+import { ClientsModule } from './clients/clients.module';
+import { PipelineDealsModule } from './pipeline-deals/pipeline-deals.module';
+import { ScoutingRecordsModule } from './scouting-records/scouting-records.module';
+import { DiagnosticsModule } from './diagnostics/diagnostics.module';
 
 @Module({
   imports: [
@@ -64,6 +69,11 @@ import { FarmTransactionsModule } from './farm-transactions/farm-transactions.mo
     SuppliesModule,
     ProductionStockModule,
     FarmTransactionsModule,
+    ProfessionalsModule,
+    ClientsModule,
+    PipelineDealsModule,
+    ScoutingRecordsModule,
+    DiagnosticsModule,
   ],
 })
 export class AppModule {}
