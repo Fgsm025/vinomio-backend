@@ -5,7 +5,13 @@ CREATE TYPE "CertificationType" AS ENUM ('GLOBAL_GAP', 'USDA_ORGANIC', 'USDA_GAP
 CREATE TYPE "CertificationStatus" AS ENUM ('ACTIVE', 'PENDING', 'EXPIRED');
 
 -- CreateEnum
+CREATE TYPE "ProductionStockKind" AS ENUM ('HARVEST', 'BYPRODUCT');
+
+-- CreateEnum
 CREATE TYPE "Role" AS ENUM ('OWNER', 'ADMIN', 'FINANCE', 'AGRONOMIST', 'OPERATOR');
+
+-- CreateEnum
+CREATE TYPE "FarmMoneyDirection" AS ENUM ('INCOME', 'EXPENSE');
 
 -- CreateTable
 CREATE TABLE "users" (
@@ -74,19 +80,15 @@ CREATE TABLE "machinery" (
 CREATE TABLE "crops" (
     "id" TEXT NOT NULL,
     "product" TEXT NOT NULL,
-    "variety" TEXT,
     "name_or_description" TEXT,
     "exploitation_system" TEXT,
     "agricultural_activity" TEXT,
-    "crop_system" TEXT,
     "ecological_production_certificate" TEXT,
     "crop_destination" TEXT,
     "crop_destinations" TEXT[] DEFAULT ARRAY[]::TEXT[],
     "quality_regimes" TEXT[] DEFAULT ARRAY[]::TEXT[],
-    "soil_coverage" TEXT,
     "integrated_production" BOOLEAN NOT NULL DEFAULT false,
     "reproduction_plant_material" TEXT,
-    "type_detail" TEXT,
     "horizontal_planting_frame" DOUBLE PRECISION,
     "vertical_planting_frame" DOUBLE PRECISION,
     "between_rows" DOUBLE PRECISION,
@@ -306,7 +308,6 @@ CREATE TABLE "crop_cycles" (
     "id" TEXT NOT NULL,
     "name" TEXT,
     "crop_id" TEXT NOT NULL,
-    "variety" TEXT,
     "plot_id" TEXT NOT NULL,
     "region" TEXT,
     "season" TEXT NOT NULL DEFAULT '',
@@ -345,7 +346,6 @@ CREATE TABLE "crop_cycles" (
 CREATE TABLE "crop_sales" (
     "id" TEXT NOT NULL,
     "crop_cycle_id" TEXT NOT NULL,
-    "harvest_id" TEXT,
     "date" DATE NOT NULL,
     "quantity" DOUBLE PRECISION NOT NULL,
     "unit" TEXT NOT NULL DEFAULT 'kg',
@@ -460,6 +460,73 @@ CREATE TABLE "team_members" (
 );
 
 -- CreateTable
+CREATE TABLE "professionals" (
+    "id" TEXT NOT NULL,
+    "farm_id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "role" TEXT NOT NULL,
+    "phone" TEXT,
+    "email" TEXT,
+    "company" TEXT,
+    "notes" TEXT,
+    "rate_type" TEXT,
+    "rate_amount" DOUBLE PRECISION,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "professionals_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "clients" (
+    "id" TEXT NOT NULL,
+    "farm_id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "company" TEXT,
+    "email" TEXT NOT NULL,
+    "phone" TEXT NOT NULL,
+    "address" TEXT,
+    "city" TEXT,
+    "state" TEXT,
+    "postal_code" TEXT,
+    "country" TEXT,
+    "tax_id" TEXT,
+    "payment_terms" TEXT,
+    "credit_limit" DOUBLE PRECISION,
+    "status" TEXT NOT NULL,
+    "notes" TEXT,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "clients_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "pipeline_deals" (
+    "id" TEXT NOT NULL,
+    "farm_id" TEXT NOT NULL,
+    "stage" TEXT NOT NULL,
+    "sort_order" INTEGER NOT NULL DEFAULT 0,
+    "name" TEXT NOT NULL,
+    "description" TEXT,
+    "amount" DOUBLE PRECISION NOT NULL,
+    "quantity" DOUBLE PRECISION,
+    "product_id" TEXT,
+    "priority" TEXT NOT NULL,
+    "progress" INTEGER NOT NULL DEFAULT 0,
+    "client_id" TEXT,
+    "create_date" TIMESTAMP(3) NOT NULL,
+    "close_date" TIMESTAMP(3) NOT NULL,
+    "last_update" TIMESTAMP(3) NOT NULL,
+    "owner" JSONB NOT NULL,
+    "client" JSONB NOT NULL,
+    "company" JSONB NOT NULL,
+    "collaborators" JSONB NOT NULL,
+
+    CONSTRAINT "pipeline_deals_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "traceability_records" (
     "id" TEXT NOT NULL,
     "product_id" TEXT NOT NULL,
@@ -497,11 +564,16 @@ CREATE TABLE "spray_records" (
 CREATE TABLE "scouting_records" (
     "id" TEXT NOT NULL,
     "farm_id" TEXT NOT NULL,
-    "plot_id" TEXT NOT NULL,
+    "field_id" TEXT NOT NULL,
+    "plot_id" TEXT,
     "observation_date" DATE NOT NULL,
-    "pest_or_issue" TEXT NOT NULL,
-    "severity" TEXT NOT NULL,
-    "notes" TEXT,
+    "responsible" TEXT NOT NULL,
+    "observations" TEXT NOT NULL DEFAULT '',
+    "health_status" TEXT NOT NULL,
+    "pest_detected" BOOLEAN NOT NULL DEFAULT false,
+    "disease_detected" BOOLEAN NOT NULL DEFAULT false,
+    "severity_level" TEXT NOT NULL,
+    "affected_area_percentage" DOUBLE PRECISION NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
@@ -511,12 +583,26 @@ CREATE TABLE "scouting_records" (
 -- CreateTable
 CREATE TABLE "diagnostics" (
     "id" TEXT NOT NULL,
+    "farm_id" TEXT NOT NULL,
+    "field_id" TEXT NOT NULL,
     "scouting_record_id" TEXT,
     "animal_id" TEXT,
-    "diagnosis_date" DATE,
-    "type" TEXT NOT NULL,
-    "severity" TEXT,
-    "notes" TEXT,
+    "origin" TEXT NOT NULL,
+    "diagnosis_date" DATE NOT NULL,
+    "problem_type" TEXT NOT NULL,
+    "problem_identified" TEXT NOT NULL,
+    "symptoms" TEXT NOT NULL,
+    "severity" TEXT NOT NULL,
+    "affected_area_percentage" DOUBLE PRECISION NOT NULL,
+    "photos" JSONB NOT NULL DEFAULT '[]',
+    "possible_cause" TEXT NOT NULL,
+    "contributing_factors" JSONB NOT NULL,
+    "crop_stage" TEXT,
+    "treatment_strategy" TEXT NOT NULL,
+    "recommended_products" JSONB NOT NULL,
+    "additional_instructions" TEXT,
+    "estimated_cost" DOUBLE PRECISION,
+    "status" TEXT NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
@@ -539,23 +625,42 @@ CREATE TABLE "report_templates" (
 );
 
 -- CreateTable
-CREATE TABLE "products" (
+CREATE TABLE "supplies" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "category" TEXT,
     "unit" TEXT DEFAULT 'unit',
     "description" TEXT,
+    "minimum_stock" INTEGER NOT NULL DEFAULT 0,
+    "status" TEXT NOT NULL DEFAULT 'active',
+    "use_supplier_product" BOOLEAN NOT NULL DEFAULT false,
+    "supplier_id" TEXT,
+    "supplier_product_id" TEXT,
+    "stock_origin" TEXT,
+    "purchase_date" DATE,
+    "purchase_cost" DOUBLE PRECISION,
+    "sale_price" DOUBLE PRECISION,
+    "price_regular" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "price_discounted" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "vendor" TEXT,
+    "sku" TEXT,
+    "barcode" TEXT,
+    "published_at" TIMESTAMP(3),
+    "warehouse_id" TEXT,
+    "expiry_date" DATE,
+    "stock_quantity" INTEGER NOT NULL DEFAULT 0,
     "farm_id" TEXT NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "products_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "supplies_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "suppliers" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
+    "country" TEXT,
     "phone" TEXT,
     "email" TEXT,
     "status" TEXT NOT NULL DEFAULT 'active',
@@ -582,6 +687,33 @@ CREATE TABLE "stock" (
 );
 
 -- CreateTable
+CREATE TABLE "production_stock" (
+    "id" TEXT NOT NULL,
+    "farm_id" TEXT NOT NULL,
+    "kind" "ProductionStockKind" NOT NULL,
+    "crop_id" TEXT,
+    "crop_cycle_id" TEXT,
+    "quantity" DOUBLE PRECISION NOT NULL,
+    "status" TEXT NOT NULL DEFAULT 'available',
+    "unit" TEXT NOT NULL,
+    "min_stock_level" DOUBLE PRECISION,
+    "harvest_date" DATE,
+    "expiry_date" DATE,
+    "name" TEXT,
+    "category" TEXT,
+    "production_date" DATE,
+    "field_id" TEXT,
+    "plot_ids" JSONB,
+    "warehouse_id" TEXT,
+    "sale_price" DOUBLE PRECISION,
+    "notes" TEXT,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "production_stock_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "purchases" (
     "id" TEXT NOT NULL,
     "supplier_id" TEXT NOT NULL,
@@ -591,6 +723,24 @@ CREATE TABLE "purchases" (
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "purchases_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "farm_transactions" (
+    "id" TEXT NOT NULL,
+    "farm_id" TEXT NOT NULL,
+    "direction" "FarmMoneyDirection" NOT NULL,
+    "amount" DECIMAL(12,2) NOT NULL,
+    "occurred_at" DATE NOT NULL,
+    "category" TEXT NOT NULL,
+    "description" TEXT,
+    "field_id" TEXT,
+    "source_kind" TEXT NOT NULL,
+    "source_id" TEXT,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "farm_transactions_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -730,7 +880,28 @@ CREATE UNIQUE INDEX "user_farms_user_id_farm_id_key" ON "user_farms"("user_id", 
 CREATE UNIQUE INDEX "invitations_token_key" ON "invitations"("token");
 
 -- CreateIndex
+CREATE INDEX "professionals_farm_id_idx" ON "professionals"("farm_id");
+
+-- CreateIndex
+CREATE INDEX "clients_farm_id_idx" ON "clients"("farm_id");
+
+-- CreateIndex
+CREATE INDEX "pipeline_deals_farm_id_stage_idx" ON "pipeline_deals"("farm_id", "stage");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "stock_purchase_id_key" ON "stock"("purchase_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "production_stock_crop_cycle_id_key" ON "production_stock"("crop_cycle_id");
+
+-- CreateIndex
+CREATE INDEX "production_stock_farm_id_kind_idx" ON "production_stock"("farm_id", "kind");
+
+-- CreateIndex
+CREATE INDEX "farm_transactions_farm_id_occurred_at_idx" ON "farm_transactions"("farm_id", "occurred_at");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "farm_transactions_source_kind_source_id_key" ON "farm_transactions"("source_kind", "source_id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "attendance_codes_farm_id_key" ON "attendance_codes"("farm_id");
@@ -826,6 +997,18 @@ ALTER TABLE "rainfall_events" ADD CONSTRAINT "rainfall_events_plot_id_fkey" FORE
 ALTER TABLE "team_members" ADD CONSTRAINT "team_members_farm_id_fkey" FOREIGN KEY ("farm_id") REFERENCES "farms"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "professionals" ADD CONSTRAINT "professionals_farm_id_fkey" FOREIGN KEY ("farm_id") REFERENCES "farms"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "clients" ADD CONSTRAINT "clients_farm_id_fkey" FOREIGN KEY ("farm_id") REFERENCES "farms"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "pipeline_deals" ADD CONSTRAINT "pipeline_deals_farm_id_fkey" FOREIGN KEY ("farm_id") REFERENCES "farms"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "pipeline_deals" ADD CONSTRAINT "pipeline_deals_client_id_fkey" FOREIGN KEY ("client_id") REFERENCES "clients"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "traceability_records" ADD CONSTRAINT "traceability_records_farm_id_fkey" FOREIGN KEY ("farm_id") REFERENCES "farms"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -841,13 +1024,22 @@ ALTER TABLE "spray_records" ADD CONSTRAINT "spray_records_farm_id_fkey" FOREIGN 
 ALTER TABLE "spray_records" ADD CONSTRAINT "spray_records_plot_id_fkey" FOREIGN KEY ("plot_id") REFERENCES "plots"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "spray_records" ADD CONSTRAINT "spray_records_product_id_fkey" FOREIGN KEY ("product_id") REFERENCES "products"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "spray_records" ADD CONSTRAINT "spray_records_product_id_fkey" FOREIGN KEY ("product_id") REFERENCES "supplies"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "scouting_records" ADD CONSTRAINT "scouting_records_farm_id_fkey" FOREIGN KEY ("farm_id") REFERENCES "farms"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "scouting_records" ADD CONSTRAINT "scouting_records_plot_id_fkey" FOREIGN KEY ("plot_id") REFERENCES "plots"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "scouting_records" ADD CONSTRAINT "scouting_records_field_id_fkey" FOREIGN KEY ("field_id") REFERENCES "fields"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "scouting_records" ADD CONSTRAINT "scouting_records_plot_id_fkey" FOREIGN KEY ("plot_id") REFERENCES "plots"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "diagnostics" ADD CONSTRAINT "diagnostics_farm_id_fkey" FOREIGN KEY ("farm_id") REFERENCES "farms"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "diagnostics" ADD CONSTRAINT "diagnostics_field_id_fkey" FOREIGN KEY ("field_id") REFERENCES "fields"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "diagnostics" ADD CONSTRAINT "diagnostics_scouting_record_id_fkey" FOREIGN KEY ("scouting_record_id") REFERENCES "scouting_records"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -859,7 +1051,10 @@ ALTER TABLE "diagnostics" ADD CONSTRAINT "diagnostics_animal_id_fkey" FOREIGN KE
 ALTER TABLE "report_templates" ADD CONSTRAINT "report_templates_farm_id_fkey" FOREIGN KEY ("farm_id") REFERENCES "farms"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "products" ADD CONSTRAINT "products_farm_id_fkey" FOREIGN KEY ("farm_id") REFERENCES "farms"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "supplies" ADD CONSTRAINT "supplies_farm_id_fkey" FOREIGN KEY ("farm_id") REFERENCES "farms"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "supplies" ADD CONSTRAINT "supplies_supplier_id_fkey" FOREIGN KEY ("supplier_id") REFERENCES "suppliers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "suppliers" ADD CONSTRAINT "suppliers_farm_id_fkey" FOREIGN KEY ("farm_id") REFERENCES "farms"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -868,16 +1063,31 @@ ALTER TABLE "suppliers" ADD CONSTRAINT "suppliers_farm_id_fkey" FOREIGN KEY ("fa
 ALTER TABLE "stock" ADD CONSTRAINT "stock_farm_id_fkey" FOREIGN KEY ("farm_id") REFERENCES "farms"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "stock" ADD CONSTRAINT "stock_product_id_fkey" FOREIGN KEY ("product_id") REFERENCES "products"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "stock" ADD CONSTRAINT "stock_product_id_fkey" FOREIGN KEY ("product_id") REFERENCES "supplies"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "stock" ADD CONSTRAINT "stock_purchase_id_fkey" FOREIGN KEY ("purchase_id") REFERENCES "purchases"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "production_stock" ADD CONSTRAINT "production_stock_farm_id_fkey" FOREIGN KEY ("farm_id") REFERENCES "farms"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "production_stock" ADD CONSTRAINT "production_stock_crop_id_fkey" FOREIGN KEY ("crop_id") REFERENCES "crops"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "production_stock" ADD CONSTRAINT "production_stock_crop_cycle_id_fkey" FOREIGN KEY ("crop_cycle_id") REFERENCES "crop_cycles"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "purchases" ADD CONSTRAINT "purchases_farm_id_fkey" FOREIGN KEY ("farm_id") REFERENCES "farms"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "purchases" ADD CONSTRAINT "purchases_supplier_id_fkey" FOREIGN KEY ("supplier_id") REFERENCES "suppliers"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "farm_transactions" ADD CONSTRAINT "farm_transactions_farm_id_fkey" FOREIGN KEY ("farm_id") REFERENCES "farms"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "farm_transactions" ADD CONSTRAINT "farm_transactions_field_id_fkey" FOREIGN KEY ("field_id") REFERENCES "fields"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "workflows" ADD CONSTRAINT "workflows_farm_id_fkey" FOREIGN KEY ("farm_id") REFERENCES "farms"("id") ON DELETE CASCADE ON UPDATE CASCADE;
