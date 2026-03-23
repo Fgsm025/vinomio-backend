@@ -1,13 +1,24 @@
-import { IsString, IsOptional, IsNumber, IsNotEmpty, IsBoolean, IsDateString, IsArray, IsInt } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  IsArray,
+  IsBoolean,
+  IsDateString,
+  IsInt,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Min,
+} from 'class-validator';
 
 export class CreateIrrigationScheduleDto {
   @IsString()
   @IsNotEmpty()
   scheduleName: string;
 
-  @IsOptional()
-  @IsString()
-  fieldId?: string;
+  @IsUUID()
+  fieldId: string;
 
   @IsOptional()
   @IsArray()
@@ -40,11 +51,17 @@ export class CreateIrrigationScheduleDto {
 
   @IsOptional()
   @IsInt()
+  @Min(1)
   duration?: number;
 
   @IsOptional()
   @IsNumber()
   waterVolume?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  flowRate?: number;
 
   @IsOptional()
   @IsDateString()
@@ -53,6 +70,14 @@ export class CreateIrrigationScheduleDto {
   @IsOptional()
   @IsDateString()
   lastExecutedDate?: string;
+
+  @IsDateString()
+  @IsNotEmpty()
+  startAt: string;
+
+  @IsDateString()
+  @IsNotEmpty()
+  endAt: string;
 
   @IsOptional()
   @IsString()
@@ -74,6 +99,22 @@ export class CreateIrrigationScheduleDto {
   @IsOptional()
   @IsBoolean()
   weatherDependent?: boolean;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  maxCyclesPerDay?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  cooldownMinutes?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  skipIfRain?: boolean;
 
   @IsOptional()
   @IsString()

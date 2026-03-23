@@ -405,6 +405,7 @@ model Field {
   farmTransactions    FarmTransaction[]
   scoutingRecords       ScoutingRecord[]
   diagnostics           Diagnostic[]
+  sprayRecords          SprayRecord[]
 
   @@map("fields")
 }
@@ -548,13 +549,19 @@ model IrrigationSchedule {
   frequency             String?
   duration              Int?
   waterVolume           Float?    @map("water_volume")
+  flowRate              Float?    @map("flow_rate")
   nextScheduledDate     DateTime? @map("next_scheduled_date")
   lastExecutedDate      DateTime? @map("last_executed_date")
+  startAt               DateTime? @map("start_at")
+  endAt                 DateTime? @map("end_at")
   startTime             String?   @map("start_time")
   endTime               String?   @map("end_time")
   daysOfWeek            String[]  @map("days_of_week")
   soilMoistureThreshold Float?    @map("soil_moisture_threshold")
   weatherDependent      Boolean   @default(false) @map("weather_dependent")
+  maxCyclesPerDay       Int?      @map("max_cycles_per_day")
+  cooldownMinutes       Int?      @map("cooldown_minutes")
+  skipIfRain            Boolean   @default(false) @map("skip_if_rain")
   notes                 String?
   createdAt             DateTime  @default(now()) @map("created_at")
   updatedAt             DateTime  @updatedAt @map("updated_at")
@@ -711,23 +718,53 @@ model TraceabilityRecord {
 }
 
 model SprayRecord {
-  id        String   @id @default(uuid())
-  farmId    String   @map("farm_id")
-  plotId    String?  @map("plot_id")
-  productId String   @map("product_id")
-  date      DateTime @db.Date
-  dose      Float?
-  unit      String?  @default("l/ha") @map("unit")
-  operator  String?  @map("operator")
-  notes     String?
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id                 String   @id @default(uuid())
+  farmId             String   @map("farm_id")
+  fieldId            String   @map("field_id")
+  plotId             String?  @map("plot_id")
+  plotIds            String[] @default([]) @map("plot_ids")
+  date               DateTime @db.Date
+  applicationType    String   @map("application_type")
+  applicationMethod  String   @map("application_method")
+  targetPestDisease  String?  @map("target_pest_disease")
+  weatherConditions  String?  @map("weather_conditions")
+  temperature        Float?
+  windSpeed          Float?   @map("wind_speed")
+  responsible        String
+  areaApplied        Float    @map("area_applied")
+  areaUnit           String   @map("area_unit")
+  waterVolume        Float?   @map("water_volume")
+  waterVolumeUnit    String?  @map("water_volume_unit")
+  phi                Int?
+  harvestDate        DateTime? @map("harvest_date") @db.Date
+  notes              String?
+  photos             Json     @default("[]")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
 
-  farm    Farm    @relation(fields: [farmId], references: [id], onDelete: Cascade)
-  plot    Plot?   @relation(fields: [plotId], references: [id], onDelete: SetNull)
-  supply Supply @relation(fields: [productId], references: [id], onDelete: Restrict)
+  farm              Farm                 @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  field             Field                @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+  plot              Plot?                @relation(fields: [plotId], references: [id], onDelete: SetNull)
+  products          SprayRecordProduct[]
 
   @@map("spray_records")
+}
+
+model SprayRecordProduct {
+  id            String  @id @default(uuid())
+  sprayRecordId String  @map("spray_record_id")
+  productId     String? @map("product_id")
+  productName   String  @map("product_name")
+  dosage        Float
+  dosageUnit    String  @map("dosage_unit")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  sprayRecord SprayRecord @relation(fields: [sprayRecordId], references: [id], onDelete: Cascade)
+  supply      Supply?     @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([sprayRecordId])
+  @@map("spray_record_products")
 }
 
 model ScoutingRecord {
@@ -835,8 +872,8 @@ model Supply {
 
   farm           Farm          @relation(fields: [farmId], references: [id], onDelete: Cascade)
   supplier       Supplier?     @relation(fields: [supplierId], references: [id], onDelete: SetNull)
-  stockMovements SupplyStockMovement[]
-  sprayRecords   SprayRecord[]
+  stockMovements      SupplyStockMovement[]
+  sprayRecordProducts SprayRecordProduct[]
 
   @@map("supplies")
 }

@@ -146,7 +146,7 @@ export class SuppliesService {
   async remove(id: string, farmId: string) {
     await this.findOne(id, farmId);
     const sprays = await this.prisma.sprayRecord.count({
-      where: { productId: id },
+      where: { products: { some: { productId: id } } },
     });
     if (sprays > 0) {
       throw new ConflictException(

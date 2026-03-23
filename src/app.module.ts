@@ -35,6 +35,7 @@ import { ClientsModule } from './clients/clients.module';
 import { PipelineDealsModule } from './pipeline-deals/pipeline-deals.module';
 import { ScoutingRecordsModule } from './scouting-records/scouting-records.module';
 import { DiagnosticsModule } from './diagnostics/diagnostics.module';
+import { SprayRecordsModule } from './spray-records/spray-records.module';
 
 @Module({
   imports: [
@@ -74,6 +75,7 @@ import { DiagnosticsModule } from './diagnostics/diagnostics.module';
     PipelineDealsModule,
     ScoutingRecordsModule,
     DiagnosticsModule,
+    SprayRecordsModule,
   ],
 })
 export class AppModule {}
