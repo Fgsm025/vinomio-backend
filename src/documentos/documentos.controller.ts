@@ -57,12 +57,95 @@ export class DocumentosController {
   @Get(':fincaId/documentos')
   async getDocuments(@CurrentUser() user: CurrentUserPayload, @Param('fincaId') fincaId: string) {
     const farmId = this.resolveFarmId(user, fincaId);
+
+    // 1) Identificar el ownerId de esta finca
+    const ownerMembership = await this.prisma.userFarm.findFirst({
+      where: { farmId, role: 'OWNER' },
+      select: { userId: true },
+    });
+
+    if (!ownerMembership?.userId) {
+      throw new NotFoundException('Owner for this farm not found');
+    }
+
+    const ownerId = ownerMembership.userId;
+
+    // 2) Obtener todas las fincas del owner (solo donde es OWNER)
+    const ownerFarms = await this.prisma.userFarm.findMany({
+      where: { userId: ownerId, role: 'OWNER' },
+      select: { farmId: true },
+    });
+    const ownerFarmIds = ownerFarms.map((f) => f.farmId);
+
+    // 3) Lista de documentos para la finca solicitada (no global)
     const documents = await this.prisma.document.findMany({
       where: { farmId },
       orderBy: { createdAt: 'desc' },
     });
-    const totalSize = documents.reduce((acc, doc) => acc + doc.size, 0);
-    return { documents, totalSize };
+
+    // 4) totalSize global para el owner (gran total) para que el cupo sea único
+    const ownerFarmWhere =
+      ownerFarmIds.length > 0 ? { farmId: { in: ownerFarmIds } } : { farmId };
+
+    const totalAgg = await this.prisma.document.aggregate({
+      where: ownerFarmWhere,
+      _sum: { size: true },
+    });
+    const totalSize = totalAgg._sum.size ?? 0;
+
+    // Breakdown global por tipo (Photos/Videos/Documents) basado en `type` del documento.
+    const photosAgg = await this.prisma.document.aggregate({
+      where: { ...ownerFarmWhere, type: { startsWith: 'image/' } },
+      _sum: { size: true },
+    });
+    const photosCount = await this.prisma.document.count({
+      where: { ...ownerFarmWhere, type: { startsWith: 'image/' } },
+    });
+
+    const videosAgg = await this.prisma.document.aggregate({
+      where: { ...ownerFarmWhere, type: { startsWith: 'video/' } },
+      _sum: { size: true },
+    });
+    const videosCount = await this.prisma.document.count({
+      where: { ...ownerFarmWhere, type: { startsWith: 'video/' } },
+    });
+
+    // Docs = todo lo que NO sea image/* ni video/*
+    const docsAgg = await this.prisma.document.aggregate({
+      where: {
+        ...ownerFarmWhere,
+        AND: [
+          { type: { not: { startsWith: 'image/' } } },
+          { type: { not: { startsWith: 'video/' } } },
+        ],
+      },
+      _sum: { size: true },
+    });
+    const docsCount = await this.prisma.document.count({
+      where: {
+        ...ownerFarmWhere,
+        AND: [
+          { type: { not: { startsWith: 'image/' } } },
+          { type: { not: { startsWith: 'video/' } } },
+        ],
+      },
+    });
+
+    const totalPhotosSize = photosAgg._sum.size ?? 0;
+    const totalVideosSize = videosAgg._sum.size ?? 0;
+    // Preferimos mantener consistencia con `totalSize` (por cualquier clasificación eventual).
+    const totalDocsSize = Math.max(0, totalSize - totalPhotosSize - totalVideosSize);
+
+    return {
+      documents,
+      totalSize,
+      totalPhotosSize,
+      totalVideosSize,
+      totalDocsSize,
+      photosCount,
+      videosCount,
+      docsCount,
+    };
   }
 
   @Patch(':fincaId/documentos/:id')

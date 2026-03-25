@@ -106,23 +106,34 @@ export class UsersService {
     await this.ensureDefaultSettings(userId);
     const update: Prisma.SettingsUpdateInput = {};
     if (data.region !== undefined) update.region = data.region;
-    if (data.temperatureUnit !== undefined) update.temperatureUnit = data.temperatureUnit;
-    if (data.measurementSystem !== undefined) update.measurementSystem = data.measurementSystem;
-    if (data.firstDayOfWeek !== undefined) update.firstDayOfWeek = data.firstDayOfWeek;
+    if (data.temperatureUnit !== undefined)
+      update.temperatureUnit = data.temperatureUnit;
+    if (data.measurementSystem !== undefined)
+      update.measurementSystem = data.measurementSystem;
+    if (data.firstDayOfWeek !== undefined)
+      update.firstDayOfWeek = data.firstDayOfWeek;
     if (data.dateFormat !== undefined) update.dateFormat = data.dateFormat;
-    if (data.numberFormat !== undefined) update.numberFormat = data.numberFormat;
-    if (data.listSortOrder !== undefined) update.listSortOrder = data.listSortOrder;
+    if (data.numberFormat !== undefined)
+      update.numberFormat = data.numberFormat;
+    if (data.listSortOrder !== undefined)
+      update.listSortOrder = data.listSortOrder;
     if (data.language !== undefined) update.language = data.language;
-    if (data.weatherAlerts !== undefined) update.weatherAlerts = data.weatherAlerts;
+    if (data.weatherAlerts !== undefined)
+      update.weatherAlerts = data.weatherAlerts;
     if (data.taskUpdates !== undefined) update.taskUpdates = data.taskUpdates;
-    if (data.systemAnnouncements !== undefined) update.systemAnnouncements = data.systemAnnouncements;
-    if (data.fcmToken !== undefined) update.fcmToken = data.fcmToken === '' ? null : data.fcmToken;
+    if (data.systemAnnouncements !== undefined)
+      update.systemAnnouncements = data.systemAnnouncements;
+    if (data.fcmToken !== undefined)
+      update.fcmToken = data.fcmToken === '' ? null : data.fcmToken;
     if (data.emailNotificationsEnabled !== undefined)
       update.emailNotificationsEnabled = data.emailNotificationsEnabled;
-    if (data.fontSizeAdjustment !== undefined) update.fontSizeAdjustment = data.fontSizeAdjustment;
+    if (data.fontSizeAdjustment !== undefined)
+      update.fontSizeAdjustment = data.fontSizeAdjustment;
     if (data.colorFilter !== undefined) update.colorFilter = data.colorFilter;
-    if (data.colorFilterEnabled !== undefined) update.colorFilterEnabled = data.colorFilterEnabled;
-    if (data.use24HourTime !== undefined) update.use24HourTime = data.use24HourTime;
+    if (data.colorFilterEnabled !== undefined)
+      update.colorFilterEnabled = data.colorFilterEnabled;
+    if (data.use24HourTime !== undefined)
+      update.use24HourTime = data.use24HourTime;
     if (data.showSeconds !== undefined) update.showSeconds = data.showSeconds;
 
     return this.prisma.settings.update({
@@ -138,7 +149,11 @@ export class UsersService {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const { firstName, lastName } = this.resolveNameParts(name, undefined, undefined);
+    const { firstName, lastName } = this.resolveNameParts(
+      name,
+      undefined,
+      undefined,
+    );
 
     const user = await this.prisma.user.create({
       data: {
@@ -165,7 +180,10 @@ export class UsersService {
     firstName?: string,
     lastName?: string,
   ) {
-    const randomPassword = await bcrypt.hash(Math.random().toString(36) + Date.now().toString(36), 10);
+    const randomPassword = await bcrypt.hash(
+      Math.random().toString(36) + Date.now().toString(36),
+      10,
+    );
 
     const updateData: {
       name?: string;
@@ -176,7 +194,11 @@ export class UsersService {
     if (avatar !== undefined) updateData.avatar = avatar;
     if (googleId !== undefined) updateData.googleId = googleId;
 
-    const { firstName: fn, lastName: ln } = this.resolveNameParts(name, firstName, lastName);
+    const { firstName: fn, lastName: ln } = this.resolveNameParts(
+      name,
+      firstName,
+      lastName,
+    );
 
     const includeFarms = {
       farms: {
@@ -204,8 +226,11 @@ export class UsersService {
       });
 
       const fillFirst =
-        firstName !== undefined && firstName.trim().length > 0 && !user.firstName;
-      const fillLast = lastName !== undefined && lastName.trim().length > 0 && !user.lastName;
+        firstName !== undefined &&
+        firstName.trim().length > 0 &&
+        !user.firstName;
+      const fillLast =
+        lastName !== undefined && lastName.trim().length > 0 && !user.lastName;
       if (fillFirst || fillLast) {
         user = await this.prisma.user.update({
           where: { id: user.id },
@@ -225,8 +250,12 @@ export class UsersService {
         error.code === 'P2002' &&
         (() => {
           const target = error.meta?.target as string[] | undefined;
-          const fields = (error.meta as any)?.driverAdapterError?.cause?.constraint?.fields as string[] | undefined;
-          return (Array.isArray(target) && target.includes('email')) || (Array.isArray(fields) && fields.includes('email'));
+          const fields = (error.meta as any)?.driverAdapterError?.cause
+            ?.constraint?.fields as string[] | undefined;
+          return (
+            (Array.isArray(target) && target.includes('email')) ||
+            (Array.isArray(fields) && fields.includes('email'))
+          );
         })();
       if (isEmailConflict) {
         const existing = await this.prisma.user.findUnique({
@@ -240,8 +269,13 @@ export class UsersService {
           include: includeFarms,
         });
         const fillFirst =
-          firstName !== undefined && firstName.trim().length > 0 && !updated.firstName;
-        const fillLast = lastName !== undefined && lastName.trim().length > 0 && !updated.lastName;
+          firstName !== undefined &&
+          firstName.trim().length > 0 &&
+          !updated.firstName;
+        const fillLast =
+          lastName !== undefined &&
+          lastName.trim().length > 0 &&
+          !updated.lastName;
         if (fillFirst || fillLast) {
           updated = await this.prisma.user.update({
             where: { email },
@@ -277,7 +311,8 @@ export class UsersService {
     const data: Prisma.UserUpdateInput = {};
 
     if (dto.firstName !== undefined) {
-      data.firstName = dto.firstName.trim() === '' ? null : dto.firstName.trim();
+      data.firstName =
+        dto.firstName.trim() === '' ? null : dto.firstName.trim();
     }
     if (dto.lastName !== undefined) {
       data.lastName = dto.lastName.trim() === '' ? null : dto.lastName.trim();
@@ -286,10 +321,12 @@ export class UsersService {
       data.userName = dto.userName.trim() === '' ? null : dto.userName.trim();
     }
     if (dto.phoneNumber !== undefined) {
-      data.phoneNumber = dto.phoneNumber.trim() === '' ? null : dto.phoneNumber.trim();
+      data.phoneNumber =
+        dto.phoneNumber.trim() === '' ? null : dto.phoneNumber.trim();
     }
     if (dto.secondaryEmail !== undefined) {
-      data.secondaryEmail = dto.secondaryEmail.trim() === '' ? null : dto.secondaryEmail.trim();
+      data.secondaryEmail =
+        dto.secondaryEmail.trim() === '' ? null : dto.secondaryEmail.trim();
     }
     if (dto.birthDate !== undefined) {
       const raw = dto.birthDate.trim();

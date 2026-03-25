@@ -1,4 +1,15 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, ParseUUIDPipe, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  ParseUUIDPipe,
+  UseGuards,
+  BadRequestException,
+} from '@nestjs/common';
 import { TeamMembersService } from './team-members.service';
 import { CreateTeamMemberDto } from './dto/create-team-member.dto';
 import { UpdateTeamMemberDto } from './dto/update-team-member.dto';
@@ -23,6 +34,22 @@ export class TeamMembersController {
       throw new Error('Farm context required (x-farm-id header)');
     }
     return this.teamMembersService.findFarmMembers(user.farmId);
+  }
+
+  @Post('farm-members/:userId/revoke-sessions')
+  @UseGuards(JwtAuthGuard)
+  revokeUserSessions(
+    @CurrentUser() user: CurrentUserPayload,
+    @Param('userId', ParseUUIDPipe) userId: string,
+  ) {
+    if (!user.farmId) {
+      throw new BadRequestException('Farm context required (x-farm-id header)');
+    }
+    return this.teamMembersService.revokeUserSessionsOnFarm(
+      user.userId,
+      user.farmId,
+      userId,
+    );
   }
 
   @Put('farm-members/:userId/access-level')

@@ -34,7 +34,9 @@ export class AuthService {
       firstName: user.firstName ?? null,
       lastName: user.lastName ?? null,
       userName: user.userName ?? null,
-      birthDate: bd ? (bd instanceof Date ? bd : new Date(bd)).toISOString().slice(0, 10) : null,
+      birthDate: bd
+        ? (bd instanceof Date ? bd : new Date(bd)).toISOString().slice(0, 10)
+        : null,
       phoneNumber: user.phoneNumber ?? null,
       secondaryEmail: user.secondaryEmail ?? null,
       avatar: user.avatar ?? null,
@@ -43,7 +45,11 @@ export class AuthService {
   }
 
   async register(registerDto: RegisterDto) {
-    const user = await this.usersService.create(registerDto.email, registerDto.password, registerDto.name);
+    const user = await this.usersService.create(
+      registerDto.email,
+      registerDto.password,
+      registerDto.name,
+    );
 
     const payload = {
       email: user.email,
@@ -144,7 +150,14 @@ export class AuthService {
     firstName?: string,
     lastName?: string,
   ) {
-    const user = await this.usersService.upsertFromFirebase(email, name, avatar, googleId, firstName, lastName);
+    const user = await this.usersService.upsertFromFirebase(
+      email,
+      name,
+      avatar,
+      googleId,
+      firstName,
+      lastName,
+    );
 
     const userForLogin = {
       id: user.id,
@@ -176,7 +189,14 @@ export class AuthService {
     firstName?: string,
     lastName?: string,
   ) {
-    const user = await this.usersService.upsertFromFirebase(email, name, avatar, googleId, firstName, lastName);
+    const user = await this.usersService.upsertFromFirebase(
+      email,
+      name,
+      avatar,
+      googleId,
+      firstName,
+      lastName,
+    );
 
     const payload = {
       email: user.email,
@@ -231,10 +251,12 @@ export class AuthService {
         access_token,
         user: {
           ...base,
-          farmId: userFarms.length > 0 ? farmId || userFarms[0].farmId : undefined,
+          farmId:
+            userFarms.length > 0 ? farmId || userFarms[0].farmId : undefined,
           role:
             userFarms.length > 0
-              ? userFarms.find((uf: any) => uf.farmId === farmId)?.role || userFarms[0].role
+              ? userFarms.find((uf: any) => uf.farmId === farmId)?.role ||
+                userFarms[0].role
               : undefined,
           hasCompletedOnboarding: false,
           farms: userFarms.map((uf: any) => ({

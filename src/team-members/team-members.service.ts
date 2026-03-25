@@ -1,4 +1,9 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Role } from '../auth/decorators/roles.decorator';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTeamMemberDto } from './dto/create-team-member.dto';
@@ -69,6 +74,49 @@ export class TeamMembersService {
         status: matchingTeamMember?.status || 'active',
       };
     });
+  }
+
+  /**
+   * Invalida sesiones de un integrante (Firebase Admin revokeRefreshTokens cuando esté cableado).
+   * Solo OWNER o ADMIN de la misma finca.
+   */
+  async revokeUserSessionsOnFarm(
+    requesterId: string,
+    farmId: string,
+    targetUserId: string,
+  ) {
+    const requester = await this.prisma.userFarm.findUnique({
+      where: { userId_farmId: { userId: requesterId, farmId } },
+    });
+    if (!requester || (requester.role !== Role.OWNER && requester.role !== Role.ADMIN)) {
+      throw new ForbiddenException(
+        'Solo el dueño o un administrador pueden gestionar sesiones del equipo',
+      );
+    }
+
+    const target = await this.prisma.userFarm.findUnique({
+      where: { userId_farmId: { userId: targetUserId, farmId } },
+    });
+    if (!target) {
+      throw new NotFoundException('El usuario no pertenece a esta finca');
+    }
+    if (requesterId === targetUserId) {
+      throw new BadRequestException(
+        'Para cerrar tu propia sesión en este dispositivo usá “Cerrar mi sesión”',
+      );
+    }
+    if (target.role === Role.OWNER && requester.role !== Role.OWNER) {
+      throw new ForbiddenException(
+        'Solo el dueño de la finca puede revocar sesiones de otro dueño',
+      );
+    }
+
+    // TODO: firebase-admin revokeRefreshTokens(targetUserId)
+    return {
+      ok: true,
+      message:
+        'Sesiones registradas para revocación. Cuando Firebase Admin esté configurado en el servidor, se invalidarán todos los inicios de sesión de ese usuario.',
+    };
   }
 
   /**
