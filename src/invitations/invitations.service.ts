@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { UsersService } from '../users/users.service';
 import { CreateInvitationDto } from './dto/create-invitation.dto';
 import { AcceptInvitationDto } from './dto/accept-invitation.dto';
 import * as crypto from 'crypto';
@@ -7,7 +8,10 @@ import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class InvitationsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly usersService: UsersService,
+  ) {}
 
   async createInvitation(
     createInvitationDto: CreateInvitationDto,
@@ -135,6 +139,8 @@ export class InvitationsService {
         });
       }
     }
+
+    await this.usersService.ensureDefaultSettings(user.id);
 
     const existingMembership = await this.prisma.userFarm.findUnique({
       where: { userId_farmId: { userId: user.id, farmId: invitation.farmId } },

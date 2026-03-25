@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import { RegisterDto } from './dto/register.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
+import { UpdateSettingsDto } from './dto/update-settings.dto';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -11,12 +13,37 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
+  private profilePayload(user: {
+    id: string;
+    email: string;
+    name: string | null;
+    firstName: string | null;
+    lastName: string | null;
+    userName: string | null;
+    birthDate: Date | null;
+    phoneNumber: string | null;
+    secondaryEmail: string | null;
+    avatar: string | null;
+    hasCompletedOnboarding: boolean;
+  }) {
+    const bd = user.birthDate;
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name ?? null,
+      firstName: user.firstName ?? null,
+      lastName: user.lastName ?? null,
+      userName: user.userName ?? null,
+      birthDate: bd ? (bd instanceof Date ? bd : new Date(bd)).toISOString().slice(0, 10) : null,
+      phoneNumber: user.phoneNumber ?? null,
+      secondaryEmail: user.secondaryEmail ?? null,
+      avatar: user.avatar ?? null,
+      hasCompletedOnboarding: user.hasCompletedOnboarding,
+    };
+  }
+
   async register(registerDto: RegisterDto) {
-    const user = await this.usersService.create(
-      registerDto.email,
-      registerDto.password,
-      registerDto.name,
-    );
+    const user = await this.usersService.create(registerDto.email, registerDto.password, registerDto.name);
 
     const payload = {
       email: user.email,
@@ -27,13 +54,7 @@ export class AuthService {
 
     return {
       access_token,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name || null,
-        avatar: user.avatar || null,
-        hasCompletedOnboarding: false,
-      },
+      user: this.profilePayload(user),
       needsOnboarding: true,
     };
   }
@@ -48,28 +69,93 @@ export class AuthService {
   }
 
   async completeOnboarding(userId: string) {
-    return this.usersService.completeOnboarding(userId);
+    const user = await this.usersService.completeOnboarding(userId);
+    return this.profilePayload(user);
+  }
+
+  private settingsPayload(settings: {
+    region: string;
+    temperatureUnit: string;
+    measurementSystem: string;
+    firstDayOfWeek: number;
+    dateFormat: string;
+    numberFormat: string;
+    listSortOrder: string;
+    language: string;
+    weatherAlerts: boolean;
+    taskUpdates: boolean;
+    systemAnnouncements: boolean;
+    fcmToken: string | null;
+    emailNotificationsEnabled: boolean;
+    fontSizeAdjustment: number;
+    colorFilter: string;
+    colorFilterEnabled: boolean;
+    use24HourTime: boolean;
+    showSeconds: boolean;
+  }) {
+    return {
+      region: settings.region,
+      temperatureUnit: settings.temperatureUnit,
+      measurementSystem: settings.measurementSystem,
+      firstDayOfWeek: settings.firstDayOfWeek,
+      dateFormat: settings.dateFormat,
+      numberFormat: settings.numberFormat,
+      listSortOrder: settings.listSortOrder,
+      language: settings.language,
+      weatherAlerts: settings.weatherAlerts,
+      taskUpdates: settings.taskUpdates,
+      systemAnnouncements: settings.systemAnnouncements,
+      fcmToken: settings.fcmToken,
+      emailNotificationsEnabled: settings.emailNotificationsEnabled,
+      fontSizeAdjustment: settings.fontSizeAdjustment,
+      colorFilter: settings.colorFilter,
+      colorFilterEnabled: settings.colorFilterEnabled,
+      use24HourTime: settings.use24HourTime,
+      showSeconds: settings.showSeconds,
+    };
   }
 
   async getProfile(userId: string) {
     const user = await this.usersService.findById(userId);
     if (!user) return null;
+    const settings = await this.usersService.getSettings(userId);
     return {
-      id: user.id,
-      email: user.email,
-      name: user.name || null,
-      avatar: user.avatar || null,
-      hasCompletedOnboarding: user.hasCompletedOnboarding,
+      ...this.profilePayload(user),
+      settings: this.settingsPayload(settings),
     };
   }
 
-  async firebaseLogin(email: string, name?: string, avatar?: string, googleId?: string, farmId?: string) {
-    const user = await this.usersService.upsertFromFirebase(email, name, avatar, googleId);
+  async updateSettings(userId: string, dto: UpdateSettingsDto) {
+    const updated = await this.usersService.updateSettings(userId, dto);
+    return this.settingsPayload(updated);
+  }
+
+  async updateProfile(userId: string, dto: UpdateProfileDto) {
+    const user = await this.usersService.updateProfile(userId, dto);
+    return this.profilePayload(user);
+  }
+
+  async firebaseLogin(
+    email: string,
+    name?: string,
+    avatar?: string,
+    googleId?: string,
+    farmId?: string,
+    firstName?: string,
+    lastName?: string,
+  ) {
+    const user = await this.usersService.upsertFromFirebase(email, name, avatar, googleId, firstName, lastName);
 
     const userForLogin = {
       id: user.id,
       email: user.email,
       name: user.name,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      userName: user.userName,
+      birthDate: user.birthDate,
+      phoneNumber: user.phoneNumber,
+      secondaryEmail: user.secondaryEmail,
       avatar: user.avatar,
       hasCompletedOnboarding: user.hasCompletedOnboarding,
       farms: (user.farms || []).map((uf: any) => ({
@@ -82,8 +168,15 @@ export class AuthService {
     return this.login(userForLogin, farmId);
   }
 
-  async registerFromFirebase(email: string, name?: string, avatar?: string, googleId?: string) {
-    const user = await this.usersService.upsertFromFirebase(email, name, avatar, googleId);
+  async registerFromFirebase(
+    email: string,
+    name?: string,
+    avatar?: string,
+    googleId?: string,
+    firstName?: string,
+    lastName?: string,
+  ) {
+    const user = await this.usersService.upsertFromFirebase(email, name, avatar, googleId, firstName, lastName);
 
     const payload = {
       email: user.email,
@@ -94,26 +187,14 @@ export class AuthService {
 
     return {
       access_token,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name || null,
-        avatar: user.avatar || null,
-        hasCompletedOnboarding: false,
-      },
+      user: this.profilePayload(user),
       needsOnboarding: true,
     };
   }
 
   async updateAvatar(userId: string, avatar: string) {
     const user = await this.usersService.updateAvatar(userId, avatar);
-    return {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      avatar: user.avatar,
-      hasCompletedOnboarding: user.hasCompletedOnboarding,
-    };
+    return this.profilePayload(user);
   }
 
   async deleteAccount(userId: string) {
@@ -123,20 +204,19 @@ export class AuthService {
 
   async login(user: any, farmId?: string) {
     const userFarms = user.farms || [];
-    
+    const base = this.profilePayload(user);
+
     if (!user.hasCompletedOnboarding) {
       const payload: any = {
         email: user.email,
         sub: user.id,
         needsOnboarding: true,
       };
-      
+
       if (userFarms.length > 0) {
         let selectedFarm = userFarms[0];
         if (farmId) {
-          const found = userFarms.find(
-            (uf: any) => uf.farmId === farmId,
-          );
+          const found = userFarms.find((uf: any) => uf.farmId === farmId);
           if (found) {
             selectedFarm = found;
           }
@@ -144,18 +224,18 @@ export class AuthService {
         payload.farmId = selectedFarm.farmId;
         payload.role = selectedFarm.role;
       }
-      
+
       const access_token = this.jwtService.sign(payload);
 
       return {
         access_token,
         user: {
-          id: user.id,
-          email: user.email,
-          name: user.name || null,
-          avatar: user.avatar || null,
-          farmId: userFarms.length > 0 ? (farmId || userFarms[0].farmId) : undefined,
-          role: userFarms.length > 0 ? (userFarms.find((uf: any) => uf.farmId === farmId)?.role || userFarms[0].role) : undefined,
+          ...base,
+          farmId: userFarms.length > 0 ? farmId || userFarms[0].farmId : undefined,
+          role:
+            userFarms.length > 0
+              ? userFarms.find((uf: any) => uf.farmId === farmId)?.role || userFarms[0].role
+              : undefined,
           hasCompletedOnboarding: false,
           farms: userFarms.map((uf: any) => ({
             id: uf.farmId,
@@ -173,9 +253,7 @@ export class AuthService {
 
     let selectedFarm = userFarms[0];
     if (farmId) {
-      const found = userFarms.find(
-        (uf: any) => uf.farmId === farmId,
-      );
+      const found = userFarms.find((uf: any) => uf.farmId === farmId);
       if (found) {
         selectedFarm = found;
       }
@@ -192,10 +270,7 @@ export class AuthService {
     return {
       access_token,
       user: {
-        id: user.id,
-        email: user.email,
-        name: user.name || null,
-        avatar: user.avatar || null,
+        ...base,
         farmId: selectedFarm.farmId,
         role: selectedFarm.role,
         hasCompletedOnboarding: user.hasCompletedOnboarding,

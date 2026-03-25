@@ -69,20 +69,65 @@ enum FarmMoneyDirection {
 }
 
 model User {
-  id                     String   @id @default(uuid())
-  email                  String   @unique
+  id                     String    @id @default(uuid())
+  email                  String    @unique
   password               String
   name                   String?
+  firstName              String?   @map("first_name")
+  lastName               String?   @map("last_name")
+  userName               String?   @map("user_name")
+  birthDate              DateTime? @map("birth_date") @db.Date
+  phoneNumber            String?   @map("phone_number")
+  secondaryEmail         String?   @map("secondary_email")
   avatar                 String?
-  googleId               String?  @unique @map("google_id")
-  hasCompletedOnboarding Boolean  @default(false) @map("has_completed_onboarding")
-  createdAt              DateTime @default(now()) @map("created_at")
-  updatedAt              DateTime @updatedAt @map("updated_at")
+  googleId               String?   @unique @map("google_id")
+  hasCompletedOnboarding Boolean   @default(false) @map("has_completed_onboarding")
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
 
   farms       UserFarm[]
   invitations Invitation[]
+  settings    Settings?
 
   @@map("users")
+}
+
+model Settings {
+  id                String   @id @default(uuid())
+  userId            String   @unique @map("user_id")
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  region            String   @default("United States")
+  temperatureUnit   String   @default("celsius") @map("temperature_unit")
+  measurementSystem String   @default("metric") @map("measurement_system")
+  firstDayOfWeek    Int      @default(0) @map("first_day_of_week")
+  dateFormat        String   @default("DD/MM/YYYY") @map("date_format")
+  numberFormat      String   @default("12,34,567.89") @map("number_format")
+  listSortOrder     String   @default("Universal") @map("list_sort_order")
+
+  language          String   @default("en")
+
+  weatherAlerts        Boolean @default(true) @map("weather_alerts")
+  taskUpdates          Boolean @default(true) @map("task_updates")
+  systemAnnouncements  Boolean @default(true) @map("system_announcements")
+
+  fcmToken                  String?  @map("fcm_token")
+  emailNotificationsEnabled Boolean @default(false) @map("email_notifications_enabled")
+
+  /** UI font scale percentage (e.g. 80–120); applied via CSS --base-font-size */
+  fontSizeAdjustment Int     @default(100) @map("font_size_adjustment")
+  /** Daltonism simulation: none, deuteranopia, protanopia, tritanopia, grayscale */
+  colorFilter        String  @default("none") @map("color_filter")
+  colorFilterEnabled Boolean @default(false) @map("color_filter_enabled")
+
+  /** Display times as 13:00 vs 1:00 PM */
+  use24HourTime Boolean @default(false) @map("use_24_hour_time")
+  /** Include seconds in time display (e.g. 13:00:05) */
+  showSeconds   Boolean @default(false) @map("show_seconds")
+
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@map("settings")
 }
 
 model Facility {

@@ -1,6 +1,8 @@
-import { Controller, Get, Post, Put, Delete, Body, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Put, Patch, Delete, Body, UseGuards, Request } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
+import { UpdateSettingsDto } from './dto/update-settings.dto';
 import { LoginDto } from './dto/login.dto';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -29,19 +31,60 @@ export class AuthController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Patch('profile')
+  async updateProfile(@CurrentUser() user: CurrentUserPayload, @Body() dto: UpdateProfileDto) {
+    return this.authService.updateProfile(user.userId, dto);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('settings')
+  async updateSettings(@CurrentUser() user: CurrentUserPayload, @Body() dto: UpdateSettingsDto) {
+    return this.authService.updateSettings(user.userId, dto);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Post('complete-onboarding')
   async completeOnboarding(@CurrentUser() user: CurrentUserPayload) {
     return this.authService.completeOnboarding(user.userId);
   }
 
   @Post('firebase-login')
-  async firebaseLogin(@Body() body: { email: string; name?: string; avatar?: string; googleId?: string; farmId?: string }) {
-    return this.authService.firebaseLogin(body.email, body.name, body.avatar, body.googleId, body.farmId);
+  async firebaseLogin(
+    @Body()
+    body: {
+      email: string;
+      name?: string;
+      avatar?: string;
+      googleId?: string;
+      farmId?: string;
+      firstName?: string;
+      lastName?: string;
+    },
+  ) {
+    return this.authService.firebaseLogin(
+      body.email,
+      body.name,
+      body.avatar,
+      body.googleId,
+      body.farmId,
+      body.firstName,
+      body.lastName,
+    );
   }
 
   @Post('firebase-register')
-  async firebaseRegister(@Body() body: { email: string; name?: string; avatar?: string; googleId?: string }) {
-    return this.authService.registerFromFirebase(body.email, body.name, body.avatar, body.googleId);
+  async firebaseRegister(
+    @Body()
+    body: {
+      email: string;
+      name?: string;
+      avatar?: string;
+      googleId?: string;
+      firstName?: string;
+      lastName?: string;
+    },
+  ) {
+    return this.authService.registerFromFirebase(body.email, body.name, body.avatar, body.googleId, body.firstName, body.lastName);
   }
 
   @UseGuards(JwtAuthGuard)
