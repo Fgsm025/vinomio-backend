@@ -36,6 +36,7 @@ import { PipelineDealsModule } from './pipeline-deals/pipeline-deals.module';
 import { ScoutingRecordsModule } from './scouting-records/scouting-records.module';
 import { DiagnosticsModule } from './diagnostics/diagnostics.module';
 import { SprayRecordsModule } from './spray-records/spray-records.module';
+import { AiModule } from './ai/ai.module';
 
 @Module({
   imports: [
@@ -76,6 +77,7 @@ import { SprayRecordsModule } from './spray-records/spray-records.module';
     ScoutingRecordsModule,
     DiagnosticsModule,
     SprayRecordsModule,
+    AiModule,
   ],
 })
 export class AppModule {}

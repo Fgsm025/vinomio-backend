@@ -19,6 +19,12 @@ CREATE TABLE "users" (
     "email" TEXT NOT NULL,
     "password" TEXT NOT NULL,
     "name" TEXT,
+    "first_name" TEXT,
+    "last_name" TEXT,
+    "user_name" TEXT,
+    "birth_date" DATE,
+    "phone_number" TEXT,
+    "secondary_email" TEXT,
     "avatar" TEXT,
     "google_id" TEXT,
     "has_completed_onboarding" BOOLEAN NOT NULL DEFAULT false,
@@ -26,6 +32,33 @@ CREATE TABLE "users" (
     "updated_at" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "users_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "settings" (
+    "id" TEXT NOT NULL,
+    "user_id" TEXT NOT NULL,
+    "region" TEXT NOT NULL DEFAULT 'United States',
+    "temperature_unit" TEXT NOT NULL DEFAULT 'celsius',
+    "measurement_system" TEXT NOT NULL DEFAULT 'metric',
+    "first_day_of_week" INTEGER NOT NULL DEFAULT 0,
+    "date_format" TEXT NOT NULL DEFAULT 'DD/MM/YYYY',
+    "number_format" TEXT NOT NULL DEFAULT '12,34,567.89',
+    "list_sort_order" TEXT NOT NULL DEFAULT 'Universal',
+    "language" TEXT NOT NULL DEFAULT 'en',
+    "weather_alerts" BOOLEAN NOT NULL DEFAULT true,
+    "task_updates" BOOLEAN NOT NULL DEFAULT true,
+    "system_announcements" BOOLEAN NOT NULL DEFAULT true,
+    "fcm_token" TEXT,
+    "email_notifications_enabled" BOOLEAN NOT NULL DEFAULT false,
+    "font_size_adjustment" INTEGER NOT NULL DEFAULT 100,
+    "color_filter" TEXT NOT NULL DEFAULT 'none',
+    "color_filter_enabled" BOOLEAN NOT NULL DEFAULT false,
+    "use_24_hour_time" BOOLEAN NOT NULL DEFAULT false,
+    "show_seconds" BOOLEAN NOT NULL DEFAULT false,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "settings_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -403,13 +436,19 @@ CREATE TABLE "irrigation_schedules" (
     "frequency" TEXT,
     "duration" INTEGER,
     "water_volume" DOUBLE PRECISION,
+    "flow_rate" DOUBLE PRECISION,
     "next_scheduled_date" TIMESTAMP(3),
     "last_executed_date" TIMESTAMP(3),
+    "start_at" TIMESTAMP(3),
+    "end_at" TIMESTAMP(3),
     "start_time" TEXT,
     "end_time" TEXT,
     "days_of_week" TEXT[],
     "soil_moisture_threshold" DOUBLE PRECISION,
     "weather_dependent" BOOLEAN NOT NULL DEFAULT false,
+    "max_cycles_per_day" INTEGER,
+    "cooldown_minutes" INTEGER,
+    "skip_if_rain" BOOLEAN NOT NULL DEFAULT false,
     "notes" TEXT,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
@@ -547,17 +586,43 @@ CREATE TABLE "traceability_records" (
 CREATE TABLE "spray_records" (
     "id" TEXT NOT NULL,
     "farm_id" TEXT NOT NULL,
+    "field_id" TEXT NOT NULL,
     "plot_id" TEXT,
-    "product_id" TEXT NOT NULL,
+    "plot_ids" TEXT[] DEFAULT ARRAY[]::TEXT[],
     "date" DATE NOT NULL,
-    "dose" DOUBLE PRECISION,
-    "unit" TEXT DEFAULT 'l/ha',
-    "operator" TEXT,
+    "application_type" TEXT NOT NULL,
+    "application_method" TEXT NOT NULL,
+    "target_pest_disease" TEXT,
+    "weather_conditions" TEXT,
+    "temperature" DOUBLE PRECISION,
+    "wind_speed" DOUBLE PRECISION,
+    "responsible" TEXT NOT NULL,
+    "area_applied" DOUBLE PRECISION NOT NULL,
+    "area_unit" TEXT NOT NULL,
+    "water_volume" DOUBLE PRECISION,
+    "water_volume_unit" TEXT,
+    "phi" INTEGER,
+    "harvest_date" DATE,
     "notes" TEXT,
+    "photos" JSONB NOT NULL DEFAULT '[]',
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "spray_records_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "spray_record_products" (
+    "id" TEXT NOT NULL,
+    "spray_record_id" TEXT NOT NULL,
+    "product_id" TEXT,
+    "product_name" TEXT NOT NULL,
+    "dosage" DOUBLE PRECISION NOT NULL,
+    "dosage_unit" TEXT NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "spray_record_products_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -871,6 +936,9 @@ CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
 CREATE UNIQUE INDEX "users_google_id_key" ON "users"("google_id");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "settings_user_id_key" ON "settings"("user_id");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "farms_slug_key" ON "farms"("slug");
 
 -- CreateIndex
@@ -887,6 +955,9 @@ CREATE INDEX "clients_farm_id_idx" ON "clients"("farm_id");
 
 -- CreateIndex
 CREATE INDEX "pipeline_deals_farm_id_stage_idx" ON "pipeline_deals"("farm_id", "stage");
+
+-- CreateIndex
+CREATE INDEX "spray_record_products_spray_record_id_idx" ON "spray_record_products"("spray_record_id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "stock_purchase_id_key" ON "stock"("purchase_id");
@@ -911,6 +982,9 @@ CREATE UNIQUE INDEX "attendance_codes_code_key" ON "attendance_codes"("code");
 
 -- CreateIndex
 CREATE INDEX "attendance_team_member_id_timestamp_idx" ON "attendance"("team_member_id", "timestamp");
+
+-- AddForeignKey
+ALTER TABLE "settings" ADD CONSTRAINT "settings_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "facilities" ADD CONSTRAINT "facilities_field_id_fkey" FOREIGN KEY ("field_id") REFERENCES "fields"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -1021,10 +1095,16 @@ ALTER TABLE "traceability_records" ADD CONSTRAINT "traceability_records_plot_id_
 ALTER TABLE "spray_records" ADD CONSTRAINT "spray_records_farm_id_fkey" FOREIGN KEY ("farm_id") REFERENCES "farms"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "spray_records" ADD CONSTRAINT "spray_records_field_id_fkey" FOREIGN KEY ("field_id") REFERENCES "fields"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "spray_records" ADD CONSTRAINT "spray_records_plot_id_fkey" FOREIGN KEY ("plot_id") REFERENCES "plots"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "spray_records" ADD CONSTRAINT "spray_records_product_id_fkey" FOREIGN KEY ("product_id") REFERENCES "supplies"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "spray_record_products" ADD CONSTRAINT "spray_record_products_spray_record_id_fkey" FOREIGN KEY ("spray_record_id") REFERENCES "spray_records"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "spray_record_products" ADD CONSTRAINT "spray_record_products_product_id_fkey" FOREIGN KEY ("product_id") REFERENCES "supplies"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "scouting_records" ADD CONSTRAINT "scouting_records_farm_id_fkey" FOREIGN KEY ("farm_id") REFERENCES "farms"("id") ON DELETE CASCADE ON UPDATE CASCADE;
