@@ -48,6 +48,107 @@ export class StripeService {
     return { url: session.url };
   }
 
+  /** Abre el Customer Portal de Stripe (cancelar o cambiar plan). Requiere portal activado en el Dashboard de Stripe. */
+  async createBillingPortalSession(userEmail: string, returnUrl?: string) {
+    const email = userEmail?.trim();
+    if (!email) {
+      throw new BadRequestException('userEmail es requerido');
+    }
+
+    const customers = await this.stripe.customers.list({ email, limit: 1 });
+    const customer = customers.data[0];
+    if (!customer) {
+      throw new BadRequestException(
+        'No hay cliente de Stripe con este email. Si recién pagaste, esperá unos minutos.',
+      );
+    }
+
+    const resolved = returnUrl?.trim() || `${this.checkoutAppOrigin()}/`;
+
+    const session = await this.stripe.billingPortal.sessions.create({
+      customer: customer.id,
+      return_url: resolved,
+    });
+
+    if (!session.url) {
+      throw new BadRequestException('Stripe no devolvió URL del portal de facturación');
+    }
+
+    return { url: session.url };
+  }
+
+  /**
+   * Estado real en Stripe: Pro si hay suscripción activa/trial/past_due para STRIPE_PRODUCT_ID
+   * (o cualquier suscripción activa si no hay producto configurado).
+   * `currentPeriodEnd` = fin del período de facturación actual (ISO 8601).
+   */
+  async getSubscriptionStatusForEmail(userEmail: string): Promise<{
+    isPro: boolean;
+    currentPeriodEnd: string | null;
+    cancelAtPeriodEnd: boolean;
+  }> {
+    const email = userEmail?.trim();
+    if (!email) {
+      throw new BadRequestException('userEmail es requerido');
+    }
+
+    const customers = await this.stripe.customers.list({ email, limit: 1 });
+    const customer = customers.data[0];
+    if (!customer) {
+      return { isPro: false, currentPeriodEnd: null, cancelAtPeriodEnd: false };
+    }
+
+    const subs = await this.stripe.subscriptions.list({
+      customer: customer.id,
+      status: 'all',
+      limit: 100,
+      expand: ['data.items.data.price'],
+    });
+
+    const productId = process.env.STRIPE_PRODUCT_ID?.trim();
+    const grantingStatuses = new Set(['active', 'trialing', 'past_due']);
+
+    for (const sub of subs.data) {
+      if (!grantingStatuses.has(sub.status)) {
+        continue;
+      }
+
+      let matchingItem: Stripe.SubscriptionItem | undefined;
+      if (productId?.startsWith('prod_')) {
+        for (const item of sub.items.data) {
+          const price = item.price;
+          if (typeof price === 'string') {
+            continue;
+          }
+          const p = price.product;
+          const pid = typeof p === 'string' ? p : p?.id;
+          if (pid === productId) {
+            matchingItem = item;
+            break;
+          }
+        }
+      } else {
+        matchingItem = sub.items.data[0];
+      }
+
+      if (!matchingItem) {
+        continue;
+      }
+
+      const endSec = matchingItem.current_period_end;
+      return {
+        isPro: true,
+        currentPeriodEnd:
+          typeof endSec === 'number'
+            ? new Date(endSec * 1000).toISOString()
+            : null,
+        cancelAtPeriodEnd: sub.cancel_at_period_end === true,
+      };
+    }
+
+    return { isPro: false, currentPeriodEnd: null, cancelAtPeriodEnd: false };
+  }
+
   async getCheckoutSessionStatus(sessionId: string) {
     const checkoutSession = await this.stripe.checkout.sessions.retrieve(sessionId);
     const customerEmail =
@@ -123,6 +224,17 @@ export class StripeService {
       const email = session.customer_email;
       if (email) {
         await this.usersService.activatePro(email);
+      }
+      return;
+    }
+
+    if (event.type === 'customer.subscription.updated') {
+      const subscription = event.data.object as Stripe.Subscription;
+      if (subscription.status === 'canceled') {
+        const email = await this.getSubscriptionCustomerEmail(subscription);
+        if (email) {
+          await this.usersService.deactivatePro(email);
+        }
       }
       return;
     }

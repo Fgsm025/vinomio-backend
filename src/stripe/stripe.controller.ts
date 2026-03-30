@@ -19,6 +19,12 @@ type CreateCheckoutSessionBody = {
   productId?: string;
 };
 
+type CreatePortalSessionBody = {
+  userEmail: string;
+  /** URL absoluta a la que Stripe vuelve tras el portal (ej. página Cuenta). */
+  returnUrl?: string;
+};
+
 @Controller('stripe')
 export class StripeController {
   constructor(private readonly stripeService: StripeService) {}
@@ -30,6 +36,22 @@ export class StripeController {
       priceId: body.priceId,
       productId: body.productId,
     });
+  }
+
+  @Post('create-portal-session')
+  async createPortalSession(@Body() body: CreatePortalSessionBody) {
+    return this.stripeService.createBillingPortalSession(
+      body.userEmail,
+      body.returnUrl,
+    );
+  }
+
+  @Get('subscription-status')
+  async subscriptionStatus(@Query('userEmail') userEmail?: string) {
+    if (!userEmail?.trim()) {
+      throw new BadRequestException('Missing userEmail');
+    }
+    return this.stripeService.getSubscriptionStatusForEmail(userEmail.trim());
   }
 
   @Get('session-status')
