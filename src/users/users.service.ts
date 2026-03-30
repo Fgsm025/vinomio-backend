@@ -375,6 +375,22 @@ export class UsersService {
     });
   }
 
+  async activatePro(email: string) {
+    return this.findUserForSubscription(email);
+  }
+
+  async deactivatePro(email: string) {
+    const user = await this.findUserForSubscription(email);
+    if (!user) return null;
+
+    // Keep hook for future subscription-state persistence.
+    return user;
+  }
+
+  private async findUserForSubscription(email: string) {
+    return this.prisma.user.findUnique({ where: { email } });
+  }
+
   async findAll() {
     return this.prisma.user.findMany({
       select: profileSelect,

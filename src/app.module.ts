@@ -37,6 +37,7 @@ import { ScoutingRecordsModule } from './scouting-records/scouting-records.modul
 import { DiagnosticsModule } from './diagnostics/diagnostics.module';
 import { SprayRecordsModule } from './spray-records/spray-records.module';
 import { AiModule } from './ai/ai.module';
+import { StripeModule } from './stripe/stripe.module';
 
 @Module({
   imports: [
@@ -78,6 +79,7 @@ import { AiModule } from './ai/ai.module';
     DiagnosticsModule,
     SprayRecordsModule,
     AiModule,
+    StripeModule,
   ],
 })
 export class AppModule {}
