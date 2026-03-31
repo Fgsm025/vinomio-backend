@@ -25,8 +25,31 @@ export class AuthService {
     secondaryEmail: string | null;
     avatar: string | null;
     hasCompletedOnboarding: boolean;
+    planStatus?: string;
+    lsSubscriptionId?: string | null;
+    endsAt?: Date | null;
   }) {
     const bd = user.birthDate;
+    const rawEndsAt = user.endsAt ? new Date(user.endsAt) : null;
+    const now = new Date();
+    const planStatus = user.planStatus ?? 'free';
+    const subscriptionSource = user.lsSubscriptionId ? 'lemonsqueezy' : 'none';
+    let isPro = false;
+    let trialDaysLeft = 0;
+
+    if (planStatus === 'active' || planStatus === 'on_trial') {
+      const hasTime = !rawEndsAt || rawEndsAt > now;
+      if (hasTime) {
+        isPro = true;
+        if (planStatus === 'on_trial' && rawEndsAt) {
+          const diffMs = rawEndsAt.getTime() - now.getTime();
+          if (diffMs > 0) {
+            trialDaysLeft = Math.ceil(diffMs / 86_400_000);
+          }
+        }
+      }
+    }
+
     return {
       id: user.id,
       email: user.email,
@@ -41,6 +64,12 @@ export class AuthService {
       secondaryEmail: user.secondaryEmail ?? null,
       avatar: user.avatar ?? null,
       hasCompletedOnboarding: user.hasCompletedOnboarding,
+      planStatus,
+      lsSubscriptionId: user.lsSubscriptionId ?? null,
+      endsAt: rawEndsAt ? rawEndsAt.toISOString() : null,
+      isPro,
+      trialDaysLeft,
+      subscriptionSource,
     };
   }
 
@@ -171,6 +200,9 @@ export class AuthService {
       secondaryEmail: user.secondaryEmail,
       avatar: user.avatar,
       hasCompletedOnboarding: user.hasCompletedOnboarding,
+      planStatus: user.planStatus,
+      lsSubscriptionId: user.lsSubscriptionId,
+      endsAt: user.endsAt,
       farms: (user.farms || []).map((uf: any) => ({
         farmId: uf.farmId,
         role: uf.role,

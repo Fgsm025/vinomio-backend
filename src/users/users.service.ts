@@ -15,6 +15,9 @@ const profileSelect = {
   secondaryEmail: true,
   avatar: true,
   hasCompletedOnboarding: true,
+  planStatus: true,
+  lsSubscriptionId: true,
+  endsAt: true,
   createdAt: true,
   updatedAt: true,
 } satisfies Prisma.UserSelect;

@@ -1,10 +1,19 @@
 import 'dotenv/config';
-import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
+import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { rawBody: true });
+  /**
+   * `rawBody: true` — Webhooks (Lemon Squeezy `X-Signature`, Stripe) must HMAC the **exact** bytes
+   * the provider sent. Nest wires body-parser `verify` so each JSON request also sets `req.rawBody`
+   * (Buffer) before `req.body` is parsed. Never sign `JSON.stringify(req.body)`; key order/spacing
+   * differs and verification will fail (e.g. persistent 401 on Lemon Squeezy).
+   */
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    rawBody: true,
+  });
 
   const allowedOrigins = new Set(
     [

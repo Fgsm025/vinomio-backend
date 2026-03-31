@@ -10,6 +10,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { RolesGuard } from './guards/roles.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { LocalAuthGuard } from './guards/local-auth.guard';
+import { ProGuard } from './guards/pro.guard';
 import { FarmContextInterceptor } from './exploitation-context.interceptor';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 
@@ -31,11 +32,12 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
     RolesGuard,
     JwtAuthGuard,
     LocalAuthGuard,
+    ProGuard,
     {
       provide: APP_INTERCEPTOR,
       useClass: FarmContextInterceptor,
     },
   ],
-  exports: [AuthService, RolesGuard, JwtAuthGuard, LocalAuthGuard],
+  exports: [AuthService, RolesGuard, JwtAuthGuard, LocalAuthGuard, ProGuard],
 })
 export class AuthModule {}
