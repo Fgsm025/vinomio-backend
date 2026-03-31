@@ -133,4 +133,23 @@ export class LemonSqueezyService {
     const d = new Date(value);
     return Number.isNaN(d.getTime()) ? null : d;
   }
+
+  async getCustomerPortalUrlForUser(userId: string): Promise<string> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { lsSubscriptionId: true },
+    });
+
+    if (!user || !user.lsSubscriptionId) {
+      throw new BadRequestException('No Lemon Squeezy subscription found for this user');
+    }
+
+    const base = process.env.LEMON_SQUEEZY_CUSTOMER_PORTAL_URL?.trim();
+    if (!base) {
+      this.logger.error('LEMON_SQUEEZY_CUSTOMER_PORTAL_URL is not set');
+      throw new InternalServerErrorException('Customer portal URL is not configured');
+    }
+
+    return base;
+  }
 }

@@ -1,14 +1,16 @@
-import { BadRequestException, Controller, HttpCode, Post, Req } from '@nestjs/common';
+import { BadRequestException, Controller, Get, HttpCode, Post, Req, UseGuards } from '@nestjs/common';
 import type { RawBodyRequest } from '@nestjs/common';
 import { Request } from 'express';
 import { LemonSqueezyService, type LemonSqueezyWebhookPayload } from './lemonsqueezy.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CurrentUser, type CurrentUserPayload } from '../auth/decorators/current-user.decorator';
 
-@Controller('webhooks/lemonsqueezy')
+@Controller()
 export class LemonSqueezyController {
   constructor(private readonly lemonSqueezyService: LemonSqueezyService) {}
 
   /** Requires `rawBody: true` in `main.ts` — signature is computed over `req.rawBody`, not `req.body`. */
-  @Post()
+  @Post('webhooks/lemonsqueezy')
   @HttpCode(200)
   async handleWebhook(@Req() req: RawBodyRequest<Request>) {
     const rawBody = req.rawBody;
@@ -24,5 +26,12 @@ export class LemonSqueezyController {
 
     await this.lemonSqueezyService.handleWebhookPayload(payload ?? {});
     return { received: true };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('lemonsqueezy/customer-portal')
+  async customerPortal(@CurrentUser() user: CurrentUserPayload) {
+    const url = await this.lemonSqueezyService.getCustomerPortalUrlForUser(user.userId);
+    return { url };
   }
 }
