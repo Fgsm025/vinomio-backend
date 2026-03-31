@@ -27,7 +27,10 @@ lerna-debug.log*
 *.launch
 .settings/
 *.sublime-workspace
-
+# Prisma configuration and generated files
+/prisma.config.js
+/prisma.config.d.ts
+/prisma.config.js.map
 # IDE - VSCode
 .vscode/*
 !.vscode/settings.json
