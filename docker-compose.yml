@@ -1,0 +1,45 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: cropai-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-cropai}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cropai}
+      POSTGRES_DB: ${POSTGRES_DB:-cropai}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-cropai} -d ${POSTGRES_DB:-cropai}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cropai-backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-cropai}:${POSTGRES_PASSWORD:-cropai}@db:5432/${POSTGRES_DB:-cropai}
+      PORT: 3000
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5001}
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      LEMON_SQUEEZY_SIGNING_SECRET: ${LEMON_SQUEEZY_SIGNING_SECRET}
+      LEMON_SQUEEZY_CUSTOMER_PORTAL_URL: ${LEMON_SQUEEZY_CUSTOMER_PORTAL_URL}
+
+volumes:
+  pgdata:

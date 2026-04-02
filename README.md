@@ -31,6 +31,25 @@
 $ npm install
 ```
 
+## Docker (Postgres + API + frontend)
+
+`docker-compose.yml` lives in this repo. It expects the **CropAI frontend** checkout as a **sibling folder** named `Vinomio` (same parent directory as `vinomio-backend`).
+
+```bash
+# parent/
+#   vinomio-backend/   ← you are here
+#   Vinomio/
+
+cp .env.example .env   # optional; edit JWT_SECRET etc.
+docker compose up --build
+```
+
+- API: http://localhost:3000/api  
+- App: http://localhost:5001  
+- Postgres: `localhost:5432` (default user/db `vinomio`)
+
+To build only the API image: `docker compose build backend` (or use the `Dockerfile` with your own orchestration).
+
 ## Compile and run the project
 
 ```bash
