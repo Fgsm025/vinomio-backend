@@ -29,6 +29,11 @@ export class CropCyclesController {
     return this.cropCyclesService.findAll({ plotId, season });
   }
 
+  @Get(':id/water-footprint')
+  getWaterFootprint(@Param('id', ParseUUIDPipe) id: string) {
+    return this.cropCyclesService.getWaterFootprint(id);
+  }
+
   @Get(':id')
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.cropCyclesService.findOne(id);

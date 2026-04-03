@@ -34,6 +34,40 @@ function addDays(date: Date, days: number): Date {
   return out;
 }
 
+function irrigationScheduleOverlapsCycle(
+  schedule: { startAt: Date | null; endAt: Date | null },
+  cycleStart: Date,
+  cycleEnd: Date,
+): boolean {
+  const cStart = cycleStart.getTime();
+  const cEnd = cycleEnd.getTime();
+  const sStart = schedule.startAt?.getTime() ?? null;
+  const sEnd = schedule.endAt?.getTime() ?? null;
+  if (sStart === null && sEnd === null) {
+    return true;
+  }
+  const effStart = sStart ?? Number.NEGATIVE_INFINITY;
+  const effEnd = sEnd ?? Number.POSITIVE_INFINITY;
+  return effStart <= cEnd && effEnd >= cStart;
+}
+
+/** waterVolume assumed m³; flowRate L/h; duration minutes */
+function irrigationVolumeM3(schedule: {
+  waterVolume: number | null;
+  duration: number | null;
+  flowRate: number | null;
+}): number {
+  if (schedule.waterVolume != null && schedule.waterVolume > 0) {
+    return schedule.waterVolume;
+  }
+  const duration = schedule.duration;
+  const flowRate = schedule.flowRate;
+  if (duration == null || flowRate == null || duration <= 0 || flowRate <= 0) {
+    return 0;
+  }
+  return (duration / 60) * (flowRate / 1000);
+}
+
 function enrichCycle<
   T extends {
     plantingDate: Date;
@@ -460,6 +494,71 @@ export class CropCyclesService {
     const enriched = enrichCycle(cropCycle);
     const withName = await this.addWorkflowTemplateName(enriched);
     return this.enrichStagesWithWorkflowNames(withName);
+  }
+
+  async getWaterFootprint(id: string) {
+    const cropCycle = await this.prisma.cropCycle.findUnique({
+      where: { id },
+      include: {
+        plot: {
+          include: {
+            plotsOnIrrigationSchedule: {
+              include: { irrigationSchedule: true },
+            },
+          },
+        },
+      },
+    });
+    if (!cropCycle) {
+      throw new NotFoundException(`CropCycle with id "${id}" not found`);
+    }
+
+    const cycleStart = cropCycle.plantingDate;
+    const cycleEnd = cropCycle.actualHarvestEndDate ?? new Date();
+
+    const plotSurfaceHa = cropCycle.plot?.surface ?? 0;
+    const surfaceM2 = plotSurfaceHa * 10_000;
+
+    let irrigationM3 = 0;
+    const links = cropCycle.plot?.plotsOnIrrigationSchedule ?? [];
+    for (const link of links) {
+      const schedule = link.irrigationSchedule;
+      if (!irrigationScheduleOverlapsCycle(schedule, cycleStart, cycleEnd)) {
+        continue;
+      }
+      irrigationM3 += irrigationVolumeM3(schedule);
+    }
+
+    const rainfallEvents = await this.prisma.rainfallEvent.findMany({
+      where: {
+        plotId: cropCycle.plotId,
+        startDate: { gte: cycleStart, lte: cycleEnd },
+      },
+    });
+
+    let rainfallM3 = 0;
+    for (const ev of rainfallEvents) {
+      const mm = ev.amountMm;
+      if (mm == null || mm <= 0 || surfaceM2 <= 0) {
+        continue;
+      }
+      rainfallM3 += (mm * surfaceM2) / 1000;
+    }
+
+    const totalM3 = irrigationM3 + rainfallM3;
+    const yieldKg = cropCycle.actualYield ?? null;
+    const waterFootprintM3perKg =
+      cropCycle.actualYield != null && cropCycle.actualYield > 0
+        ? totalM3 / cropCycle.actualYield
+        : null;
+
+    return {
+      irrigationM3,
+      rainfallM3,
+      totalM3,
+      yieldKg,
+      waterFootprintM3perKg,
+    };
   }
 
   async update(id: string, dto: UpdateCropCycleDto) {
