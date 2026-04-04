@@ -72,9 +72,6 @@ function endDateFromStagesAccumulated(
   return end;
 }
 
-/**
- * Techo temporal para lluvia / riego proyectado: no usar “hoy” — incluye fechas futuras dentro del ciclo.
- */
 function resolveCycleEndForWaterFootprint(
   cropCycle: {
     plantingDate: Date;
