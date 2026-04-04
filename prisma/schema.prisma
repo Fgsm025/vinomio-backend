@@ -379,6 +379,7 @@ model Farm {
   attendanceCodes     AttendanceCode?
   attendance          Attendance[]
   reportTemplates     ReportTemplate[]
+  rainfallEvents      RainfallEvent[]
 
   certificationsLegacy String[] @default([]) @map("certifications")
   modules              Json?
@@ -530,6 +531,8 @@ model CropCycle {
   tasks            Task[]
   sales            CropSale[]
   productionStock ProductionStock?
+  /** Lluvias registradas explícitamente para este ciclo (además de las por finca/parcela). */
+  rainfallEvents RainfallEvent[]
 
   @@map("crop_cycles")
 }
@@ -636,8 +639,12 @@ model PlotOnIrrigationSchedule {
 
 model RainfallEvent {
   id        String    @id @default(uuid())
-  fieldId   String    @map("field_id")
+  farmId    String    @map("farm_id")
+  /** Opcional: lluvia acotada a un campo; si es null, aplica a toda la finca. */
+  fieldId   String?   @map("field_id")
   plotId    String?   @map("plot_id")
+  /** Opcional: vincula el registro a un ciclo de producción (tracking por ciclo). */
+  cropCycleId String?   @map("crop_cycle_id")
   startDate DateTime  @map("start_date")
   endDate   DateTime? @map("end_date")
   amountMm  Float?    @map("amount_mm")
@@ -647,9 +654,13 @@ model RainfallEvent {
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
 
-  field Field @relation(fields: [fieldId], references: [id])
-  plot  Plot? @relation(fields: [plotId], references: [id], onDelete: SetNull)
+  farm      Farm       @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  field     Field?     @relation(fields: [fieldId], references: [id], onDelete: SetNull)
+  plot      Plot?      @relation(fields: [plotId], references: [id], onDelete: SetNull)
+  cropCycle CropCycle? @relation(fields: [cropCycleId], references: [id], onDelete: SetNull)
 
+  @@index([cropCycleId])
+  @@index([farmId])
   @@map("rainfall_events")
 }
 
