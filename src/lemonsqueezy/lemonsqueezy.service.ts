@@ -3,6 +3,7 @@ import {
   Injectable,
   InternalServerErrorException,
   Logger,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { createHmac, timingSafeEqual } from 'node:crypto';
@@ -21,6 +22,7 @@ export type LemonSqueezyWebhookPayload = {
       status?: string;
       ends_at?: string | null;
       renews_at?: string | null;
+      customer_id?: number | string;
     };
   };
 };
@@ -94,6 +96,10 @@ export class LemonSqueezyService {
     const lsStatus = attrs?.status?.trim() || 'active';
     const planStatus = this.mapLsStatus(lsStatus);
     const endsAt = this.parseDate(attrs?.ends_at) ?? this.parseDate(attrs?.renews_at) ?? null;
+    const lsCustomerId =
+      attrs?.customer_id === undefined || attrs?.customer_id === null
+        ? undefined
+        : String(attrs.customer_id);
 
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
@@ -103,11 +109,16 @@ export class LemonSqueezyService {
 
     await this.prisma.user.update({
       where: { id: userId },
-      data: { planStatus, lsSubscriptionId, endsAt },
+      data: {
+        planStatus,
+        lsSubscriptionId,
+        endsAt,
+        ...(lsCustomerId !== undefined ? { lsCustomerId } : {}),
+      },
     });
 
     this.logger.log(
-      `${eventName}: user ${userId} → planStatus=${planStatus}, endsAt=${endsAt?.toISOString() ?? 'null'}, lsSub=${lsSubscriptionId}`,
+      `${eventName}: user ${userId} → planStatus=${planStatus}, endsAt=${endsAt?.toISOString() ?? 'null'}, lsSub=${lsSubscriptionId}, lsCustomer=${lsCustomerId ?? 'unchanged'}`,
     );
   }
 
@@ -134,22 +145,98 @@ export class LemonSqueezyService {
     return Number.isNaN(d.getTime()) ? null : d;
   }
 
-  async getCustomerPortalUrlForUser(userId: string): Promise<string> {
+  /**
+   * Resolves the signed Lemon Squeezy customer portal URL for the authenticated user.
+   * Uses `lsCustomerId` from webhooks; if missing, backfills from `lsSubscriptionId` via the LS API.
+   */
+  async getBillingPortalUrlForUser(userId: string): Promise<string> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { lsSubscriptionId: true },
+      select: { lsCustomerId: true, lsSubscriptionId: true },
     });
 
-    if (!user || !user.lsSubscriptionId) {
-      throw new BadRequestException('No Lemon Squeezy subscription found for this user');
+    if (!user) {
+      throw new NotFoundException({ error: 'No customer found' });
     }
 
-    const base = process.env.LEMON_SQUEEZY_CUSTOMER_PORTAL_URL?.trim();
-    if (!base) {
-      this.logger.error('LEMON_SQUEEZY_CUSTOMER_PORTAL_URL is not set');
-      throw new InternalServerErrorException('Customer portal URL is not configured');
+    let customerId = user.lsCustomerId?.trim() || null;
+    if (!customerId && user.lsSubscriptionId) {
+      customerId = await this.fetchAndPersistCustomerIdFromSubscription(userId, user.lsSubscriptionId);
     }
 
-    return base;
+    if (!customerId) {
+      throw new NotFoundException({ error: 'No customer found' });
+    }
+
+    const body = await this.lemonSqueezyApiGet(`/customers/${encodeURIComponent(customerId)}`);
+    const portalUrl = this.readCustomerPortalUrl(body);
+    if (!portalUrl) {
+      this.logger.error('Lemon Squeezy customer response missing urls.customer_portal');
+      throw new InternalServerErrorException('Billing portal URL is not available');
+    }
+    return portalUrl;
+  }
+
+  private getLemonSqueezyApiKey(): string {
+    const key =
+      process.env.LEMONSQUEEZY_API_KEY?.trim() || process.env.LEMON_SQUEEZY_API_KEY?.trim();
+    if (!key) {
+      this.logger.error('LEMONSQUEEZY_API_KEY (or LEMON_SQUEEZY_API_KEY) is not set');
+      throw new InternalServerErrorException('Lemon Squeezy API is not configured');
+    }
+    return key;
+  }
+
+  private async lemonSqueezyApiGet(path: string): Promise<unknown> {
+    const key = this.getLemonSqueezyApiKey();
+    const res = await fetch(`https://api.lemonsqueezy.com/v1${path}`, {
+      headers: {
+        Authorization: `Bearer ${key}`,
+        Accept: 'application/vnd.api+json',
+      },
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      this.logger.warn(`Lemon Squeezy GET ${path} → ${res.status}: ${text.slice(0, 500)}`);
+      throw new BadRequestException('Could not load billing portal');
+    }
+    return res.json() as Promise<unknown>;
+  }
+
+  private readCustomerPortalUrl(body: unknown): string | null {
+    const data = body as {
+      data?: { attributes?: { urls?: { customer_portal?: string } } };
+    };
+    const url = data.data?.attributes?.urls?.customer_portal;
+    return typeof url === 'string' && url.length > 0 ? url : null;
+  }
+
+  private readSubscriptionCustomerId(body: unknown): string | null {
+    const data = body as { data?: { attributes?: { customer_id?: number | string } } };
+    const id = data.data?.attributes?.customer_id;
+    if (id === undefined || id === null) return null;
+    return String(id);
+  }
+
+  private async fetchAndPersistCustomerIdFromSubscription(
+    userId: string,
+    lsSubscriptionId: string,
+  ): Promise<string | null> {
+    try {
+      const body = await this.lemonSqueezyApiGet(
+        `/subscriptions/${encodeURIComponent(lsSubscriptionId)}`,
+      );
+      const customerId = this.readSubscriptionCustomerId(body);
+      if (!customerId) return null;
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: { lsCustomerId: customerId },
+      });
+      this.logger.log(`Backfilled lsCustomerId for user ${userId} from subscription ${lsSubscriptionId}`);
+      return customerId;
+    } catch (e) {
+      this.logger.warn(`Could not backfill customer id from subscription ${lsSubscriptionId}: ${e}`);
+      return null;
+    }
   }
 }

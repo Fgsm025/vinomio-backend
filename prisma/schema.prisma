@@ -86,6 +86,8 @@ model User {
   planStatus             String    @default("free") @map("plan_status")
   /** Lemon Squeezy subscription id */
   lsSubscriptionId       String?   @map("ls_subscription_id")
+  /** Lemon Squeezy customer id (for per-user billing portal URL) */
+  lsCustomerId           String?   @map("ls_customer_id")
   /** Date when access expires (trial end, cancel period end, etc.) — null = indefinite */
   endsAt                 DateTime? @map("ends_at")
   createdAt              DateTime  @default(now()) @map("created_at")

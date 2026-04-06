@@ -29,9 +29,17 @@ export class LemonSqueezyController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Get('billing-portal')
+  async billingPortal(@CurrentUser() user: CurrentUserPayload) {
+    const url = await this.lemonSqueezyService.getBillingPortalUrlForUser(user.userId);
+    return { url };
+  }
+
+  /** @deprecated Prefer GET /api/billing-portal */
+  @UseGuards(JwtAuthGuard)
   @Get('lemonsqueezy/customer-portal')
   async customerPortal(@CurrentUser() user: CurrentUserPayload) {
-    const url = await this.lemonSqueezyService.getCustomerPortalUrlForUser(user.userId);
+    const url = await this.lemonSqueezyService.getBillingPortalUrlForUser(user.userId);
     return { url };
   }
 }
