@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import { RegisterDto } from './dto/register.dto';
@@ -247,6 +247,37 @@ export class AuthService {
   async updateAvatar(userId: string, avatar: string) {
     const user = await this.usersService.updateAvatar(userId, avatar);
     return this.profilePayload(user);
+  }
+
+  /**
+   * Redeem a subscription promo code (see VINOMIO_PRO_COUPON_CODE; defaults to MESSI231 if unset).
+   */
+  async redeemSubscriptionCoupon(userId: string, rawCode: string) {
+    const expected = (
+      process.env.VINOMIO_PRO_COUPON_CODE ?? 'MESSI231'
+    ).trim();
+    const code = String(rawCode ?? '').trim();
+    if (!expected || code !== expected) {
+      throw new BadRequestException('Invalid coupon code');
+    }
+
+    const user = await this.usersService.findById(userId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const planStatus = user.planStatus ?? 'free';
+    const rawEndsAt = user.endsAt ? new Date(user.endsAt) : null;
+    const now = new Date();
+    const alreadyPro =
+      (planStatus === 'active' || planStatus === 'on_trial') &&
+      (!rawEndsAt || rawEndsAt > now);
+
+    const updated = alreadyPro
+      ? user
+      : await this.usersService.grantProFromCoupon(userId);
+
+    return this.getProfile(updated.id);
   }
 
   async deleteAccount(userId: string) {

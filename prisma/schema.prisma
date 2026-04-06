@@ -535,6 +535,7 @@ model CropCycle {
   productionStock ProductionStock?
   /** Lluvias registradas explícitamente para este ciclo (además de las por finca/parcela). */
   rainfallEvents RainfallEvent[]
+  supplyStockMovements SupplyStockMovement[]
 
   @@map("crop_cycles")
 }
@@ -909,6 +910,9 @@ model ReportTemplate {
 model Supply {
   id                 String    @id @default(uuid())
   name               String
+  /// FUEL, FERTILIZER, etc. (valor libre en app; usar "FUEL" para combustibles)
+  type               String    @default("OTHER")
+  carbonFactor       Float     @default(0) @map("carbon_factor")
   category           String?
   unit               String?   @default("unit")
   description        String?
@@ -970,11 +974,13 @@ model SupplyStockMovement {
   type       String
   farmId     String   @map("farm_id")
   purchaseId String?  @unique @map("purchase_id")
+  cropCycleId String? @map("crop_cycle_id")
   createdAt  DateTime @default(now()) @map("created_at")
 
-  farm     Farm      @relation(fields: [farmId], references: [id], onDelete: Cascade)
-  supply   Supply    @relation(fields: [productId], references: [id], onDelete: Cascade)
-  purchase Purchase? @relation(fields: [purchaseId], references: [id], onDelete: SetNull)
+  farm      Farm       @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  supply    Supply     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  purchase  Purchase?  @relation(fields: [purchaseId], references: [id], onDelete: SetNull)
+  cropCycle CropCycle? @relation(fields: [cropCycleId], references: [id], onDelete: SetNull)
 
   @@map("stock")
 }

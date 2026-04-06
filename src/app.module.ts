@@ -38,6 +38,7 @@ import { DiagnosticsModule } from './diagnostics/diagnostics.module';
 import { SprayRecordsModule } from './spray-records/spray-records.module';
 import { AiModule } from './ai/ai.module';
 import { LemonSqueezyModule } from './lemonsqueezy/lemonsqueezy.module';
+import { SustainabilityModule } from './sustainability/sustainability.module';
 //test
 @Module({
   imports: [
@@ -80,6 +81,7 @@ import { LemonSqueezyModule } from './lemonsqueezy/lemonsqueezy.module';
     SprayRecordsModule,
     AiModule,
     LemonSqueezyModule,
+    SustainabilityModule,
   ],
 })
 export class AppModule {}

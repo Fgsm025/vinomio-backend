@@ -19,6 +19,18 @@ export class CreateSupplyDto {
   @MaxLength(200)
   category?: string;
 
+  /** FUEL, FERTILIZER, SUPPLIES, etc. — en JSON usá `supplyType`, no `type` (evita conflictos con reflexión / whitelist). */
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  supplyType?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  carbonFactor?: number;
+
   @IsOptional()
   @IsString()
   @MaxLength(50)

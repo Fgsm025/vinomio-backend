@@ -1,27 +1,34 @@
-import { Controller, Get, Post, Put, Patch, Delete, Body, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Put, Patch, Delete, Body, UseGuards, Request, Res } from '@nestjs/common';
+import * as express from 'express';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateSettingsDto } from './dto/update-settings.dto';
+import { RedeemSubscriptionCouponDto } from './dto/redeem-subscription-coupon.dto';
 import { LoginDto } from './dto/login.dto';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
 import type { CurrentUserPayload } from './decorators/current-user.decorator';
+import { setAuthCookie, clearAuthCookie } from './auth-cookie.util';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('register')
-  register(@Body() registerDto: RegisterDto) {
-    return this.authService.register(registerDto);
+  async register(@Body() registerDto: RegisterDto, @Res({ passthrough: true }) res: express.Response) {
+    const result = await this.authService.register(registerDto);
+    setAuthCookie(res, result.access_token);
+    return result;
   }
 
   @UseGuards(LocalAuthGuard)
   @Post('login')
-  login(@Request() req, @Body() loginDto: LoginDto) {
-    return this.authService.login(req.user, loginDto.farmId);
+  async login(@Request() req, @Body() loginDto: LoginDto, @Res({ passthrough: true }) res: express.Response) {
+    const result = await this.authService.login(req.user, loginDto.farmId);
+    setAuthCookie(res, result.access_token);
+    return result;
   }
 
   @UseGuards(JwtAuthGuard)
@@ -48,6 +55,15 @@ export class AuthController {
     return this.authService.completeOnboarding(user.userId);
   }
 
+  @UseGuards(JwtAuthGuard)
+  @Post('redeem-subscription-coupon')
+  async redeemSubscriptionCoupon(
+    @CurrentUser() user: CurrentUserPayload,
+    @Body() dto: RedeemSubscriptionCouponDto,
+  ) {
+    return this.authService.redeemSubscriptionCoupon(user.userId, dto.code);
+  }
+
   @Post('firebase-login')
   async firebaseLogin(
     @Body()
@@ -60,8 +76,9 @@ export class AuthController {
       firstName?: string;
       lastName?: string;
     },
+    @Res({ passthrough: true }) res: express.Response,
   ) {
-    return this.authService.firebaseLogin(
+    const result = await this.authService.firebaseLogin(
       body.email,
       body.name,
       body.avatar,
@@ -70,6 +87,10 @@ export class AuthController {
       body.firstName,
       body.lastName,
     );
+    if (result.access_token) {
+      setAuthCookie(res, result.access_token);
+    }
+    return result;
   }
 
   @Post('firebase-register')
@@ -83,8 +104,17 @@ export class AuthController {
       firstName?: string;
       lastName?: string;
     },
+    @Res({ passthrough: true }) res: express.Response,
   ) {
-    return this.authService.registerFromFirebase(body.email, body.name, body.avatar, body.googleId, body.firstName, body.lastName);
+    const result = await this.authService.registerFromFirebase(body.email, body.name, body.avatar, body.googleId, body.firstName, body.lastName);
+    setAuthCookie(res, result.access_token);
+    return result;
+  }
+
+  @Post('logout')
+  logout(@Res({ passthrough: true }) res: express.Response) {
+    clearAuthCookie(res);
+    return { message: 'Logged out' };
   }
 
   @UseGuards(JwtAuthGuard)

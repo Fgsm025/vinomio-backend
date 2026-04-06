@@ -362,6 +362,18 @@ export class UsersService {
     });
   }
 
+  /** Grants Pro without Lemon Squeezy (promo / internal coupon). */
+  async grantProFromCoupon(userId: string) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        planStatus: 'active',
+        endsAt: null,
+      },
+      select: profileSelect,
+    });
+  }
+
   async updateAvatar(userId: string, avatar: string) {
     return this.prisma.user.update({
       where: { id: userId },

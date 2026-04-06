@@ -1,15 +1,20 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateSupplyDto } from './dto/create-supply.dto';
+import { CreateSupplyStockMovementDto } from './dto/create-supply-stock-movement.dto';
 import { UpdateSupplyDto } from './dto/update-supply.dto';
 
 @Injectable()
 export class SuppliesService {
+  private readonly logger = new Logger(SuppliesService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   private parseOptionalDate(value?: string | null): Date | undefined {
@@ -30,6 +35,8 @@ export class SuppliesService {
     return {
       name: dto.name.trim(),
       category: dto.category?.trim() || null,
+      type: dto.supplyType?.trim() || 'OTHER',
+      carbonFactor: dto.carbonFactor ?? 0,
       status: dto.status?.trim() || 'active',
       unit: dto.unit?.trim() || 'unit',
       description: dto.description?.trim() || null,
@@ -54,6 +61,19 @@ export class SuppliesService {
     };
   }
 
+  private async assertCropCycleInFarm(
+    cropCycleId: string | undefined,
+    farmId: string,
+  ) {
+    if (!cropCycleId || cropCycleId.trim() === '') return;
+    const cycle = await this.prisma.cropCycle.findFirst({
+      where: { id: cropCycleId.trim(), plot: { field: { farmId } } },
+    });
+    if (!cycle) {
+      throw new BadRequestException('Crop cycle not found for this farm');
+    }
+  }
+
   private async assertSupplierInFarm(
     supplierId: string | undefined,
     farmId: string,
@@ -67,11 +87,50 @@ export class SuppliesService {
     }
   }
 
-  async create(dto: CreateSupplyDto, farmId: string) {
-    await this.assertSupplierInFarm(dto.supplierId, farmId);
-    return this.prisma.supply.create({
-      data: this.toCreateData(dto, farmId),
+  private async assertFarmExists(farmId: string) {
+    const farm = await this.prisma.farm.findUnique({
+      where: { id: farmId },
+      select: { id: true },
     });
+    if (!farm) {
+      throw new BadRequestException(
+        `La finca no existe en esta base de datos (farmId=${farmId}). Elegí otra finca en la app, limpiá localStorage (selected_farm_id) o alineá el seed / DATABASE_URL.`,
+      );
+    }
+  }
+
+  async create(dto: CreateSupplyDto, farmId: string) {
+    await this.assertFarmExists(farmId);
+    await this.assertSupplierInFarm(dto.supplierId, farmId);
+    const data = this.toCreateData(dto, farmId);
+    try {
+      return await this.prisma.supply.create({ data });
+    } catch (err: unknown) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError) {
+        this.logger.error(
+          `Prisma supply.create failed code=${err.code} message=${err.message} meta=${JSON.stringify(err.meta)}`,
+        );
+        if (err.code === 'P2022' || /column|does not exist/i.test(String(err.message))) {
+          this.logger.error(
+            '→ Falta columna en DB: ejecuta migraciones en vinomio-backend: npx prisma migrate deploy (o migrate dev)',
+          );
+        }
+        if (
+          err.code === 'P2025' &&
+          err.meta &&
+          typeof err.meta === 'object' &&
+          'model' in err.meta &&
+          err.meta.model === 'Farm'
+        ) {
+          throw new BadRequestException(
+            'La finca indicada no existe en la base de datos (revisá finca seleccionada y DATABASE_URL).',
+          );
+        }
+      } else {
+        this.logger.error(`supply.create unexpected error: ${String(err)}`);
+      }
+      throw err;
+    }
   }
 
   async findAll(farmId: string) {
@@ -101,6 +160,10 @@ export class SuppliesService {
 
     if (dto.name !== undefined) data.name = dto.name.trim();
     if (dto.category !== undefined) data.category = dto.category?.trim() || null;
+    if (dto.supplyType !== undefined) {
+      data.type = dto.supplyType?.trim() || 'OTHER';
+    }
+    if (dto.carbonFactor !== undefined) data.carbonFactor = dto.carbonFactor;
     if (dto.status !== undefined) data.status = dto.status?.trim() || 'active';
     if (dto.unit !== undefined) data.unit = dto.unit?.trim() || 'unit';
     if (dto.description !== undefined) data.description = dto.description?.trim() || null;
@@ -140,6 +203,98 @@ export class SuppliesService {
     return this.prisma.supply.update({
       where: { id },
       data,
+    });
+  }
+
+  async createStockMovement(
+    supplyId: string,
+    dto: CreateSupplyStockMovementDto,
+    farmId: string,
+  ) {
+    const supply = await this.findOne(supplyId, farmId);
+    const qty = dto.quantity;
+    const movementDate =
+      this.parseOptionalDate(dto.date) ?? new Date();
+    const dateOnly = new Date(
+      Date.UTC(
+        movementDate.getUTCFullYear(),
+        movementDate.getUTCMonth(),
+        movementDate.getUTCDate(),
+      ),
+    );
+
+    const cropId =
+      dto.cropCycleId != null && String(dto.cropCycleId).trim() !== ''
+        ? String(dto.cropCycleId).trim()
+        : undefined;
+
+    if (supply.type === 'FUEL' && dto.type === 'OUTGOING') {
+      if (!cropId) {
+        throw new BadRequestException(
+          'cropCycleId is required when recording fuel consumption (outgoing)',
+        );
+      }
+    }
+
+    if (cropId) {
+      await this.assertCropCycleInFarm(cropId, farmId);
+    }
+
+    if (dto.type === 'OUTGOING') {
+      if (supply.stockQuantity < qty) {
+        throw new BadRequestException('Insufficient stock for this outgoing movement');
+      }
+    }
+
+    const delta = dto.type === 'INCOMING' ? qty : -qty;
+    const nextStock = supply.stockQuantity + delta;
+    if (nextStock < 0) {
+      throw new BadRequestException('Insufficient stock for this outgoing movement');
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const movement = await tx.supplyStockMovement.create({
+        data: {
+          productId: supplyId,
+          quantity: qty,
+          type: dto.type,
+          date: dateOnly,
+          farmId,
+          cropCycleId: cropId ?? null,
+        },
+      });
+      await tx.supply.update({
+        where: { id: supplyId },
+        data: { stockQuantity: nextStock },
+      });
+      return movement;
+    });
+  }
+
+  /**
+   * Anula una salida de combustible: restaura stock y elimina el movimiento (ajusta huella del ciclo).
+   */
+  async deleteStockMovement(movementId: string, farmId: string) {
+    const movement = await this.prisma.supplyStockMovement.findFirst({
+      where: { id: movementId, farmId },
+      include: { supply: true },
+    });
+    if (!movement) {
+      throw new NotFoundException(`Stock movement with id "${movementId}" not found`);
+    }
+    if (movement.type !== 'OUTGOING') {
+      throw new BadRequestException('Only OUTGOING movements can be reversed');
+    }
+    if (movement.supply.type !== 'FUEL') {
+      throw new BadRequestException('Only fuel (FUEL) movements can be reversed from this endpoint');
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      await tx.supply.update({
+        where: { id: movement.productId },
+        data: { stockQuantity: { increment: movement.quantity } },
+      });
+      await tx.supplyStockMovement.delete({ where: { id: movementId } });
     });
   }
 
