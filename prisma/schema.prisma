@@ -1191,3 +1191,27 @@ model Document {
 
   @@map("documents")
 }
+
+model DocumentChunk {
+  id          String   @id @default(cuid())
+  content     String
+  embedding   Unsupported("vector(1536)")
+
+  /// Source file or origin of this chunk (e.g. "vademecum-senasa-2025.pdf")
+  source      String?
+
+  /// Category to help filter relevant knowledge
+  category    String?
+
+  /// Crop this chunk applies to ("vid", "olivo", "general", etc.)
+  cropId      String?
+
+  /// Country this data applies to
+  country     String   @default("AR")
+
+  /// When this chunk was loaded into the vector store
+  loadedAt    DateTime @default(now()) @map("loaded_at")
+
+  // Index will be created manually after migration because Prisma still has limited HNSW support
+  @@map("document_chunks")
+}

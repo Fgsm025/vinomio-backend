@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Groq } from 'groq-sdk';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -60,6 +64,15 @@ interface TransactionContext {
   occurredAt: Date;
 }
 
+/** Row from vector similarity search over `document_chunks`. */
+export interface SimilarDocumentChunkRow {
+  id: string;
+  content: string;
+  source: string | null;
+  category: string | null;
+  distance: number;
+}
+
 interface FarmContextParams {
   farmName: string;
   activeLots: LotContext[];
@@ -78,6 +91,44 @@ export class AiService {
   });
 
   constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * Cosine distance (`<=>`) against stored embeddings; lower is more similar.
+   * @param embedding Must match model dimension (1536).
+   */
+  async searchSimilarDocuments(
+    embedding: number[],
+    limit = 5,
+  ): Promise<SimilarDocumentChunkRow[]> {
+    const dim = 1536;
+    if (embedding.length !== dim) {
+      throw new BadRequestException(
+        `Embedding must have length ${dim}, got ${embedding.length}`,
+      );
+    }
+    if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+      throw new BadRequestException('limit must be an integer between 1 and 100');
+    }
+    for (let i = 0; i < embedding.length; i++) {
+      if (!Number.isFinite(embedding[i])) {
+        throw new BadRequestException(`Invalid embedding value at index ${i}`);
+      }
+    }
+
+    const vectorString = `[${embedding.join(',')}]`;
+
+    return this.prisma.$queryRawUnsafe<SimilarDocumentChunkRow[]>(
+      `
+      SELECT id, content, source, category,
+             (embedding <=> $1::vector) AS distance
+      FROM document_chunks
+      ORDER BY distance ASC
+      LIMIT $2
+      `,
+      vectorString,
+      limit,
+    );
+  }
 
   private formatFarmContext(p: FarmContextParams): string {
     const sections: string[] = [`Nombre de la finca: ${p.farmName}`];

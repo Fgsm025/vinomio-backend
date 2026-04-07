@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     container_name: cropai-db
     restart: unless-stopped
     environment:
@@ -11,6 +11,7 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./scripts/docker-init-pgvector.sql:/docker-entrypoint-initdb.d/01-pgvector.sql:ro
     healthcheck:
       test:
         [
@@ -38,6 +39,7 @@ services:
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5001}
       JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
       GROQ_API_KEY: ${GROQ_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
       LEMON_SQUEEZY_SIGNING_SECRET: ${LEMON_SQUEEZY_SIGNING_SECRET}
       LEMONSQUEEZY_API_KEY: ${LEMONSQUEEZY_API_KEY}
 

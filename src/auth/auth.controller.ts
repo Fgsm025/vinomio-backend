@@ -1,4 +1,15 @@
-import { Controller, Get, Post, Put, Patch, Delete, Body, UseGuards, Request, Res } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Patch,
+  Delete,
+  Body,
+  UseGuards,
+  Request,
+  Res,
+} from '@nestjs/common';
 import * as express from 'express';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
@@ -17,7 +28,10 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('register')
-  async register(@Body() registerDto: RegisterDto, @Res({ passthrough: true }) res: express.Response) {
+  async register(
+    @Body() registerDto: RegisterDto,
+    @Res({ passthrough: true }) res: express.Response,
+  ) {
     const result = await this.authService.register(registerDto);
     setAuthCookie(res, result.access_token);
     return result;
@@ -25,7 +39,11 @@ export class AuthController {
 
   @UseGuards(LocalAuthGuard)
   @Post('login')
-  async login(@Request() req, @Body() loginDto: LoginDto, @Res({ passthrough: true }) res: express.Response) {
+  async login(
+    @Request() req,
+    @Body() loginDto: LoginDto,
+    @Res({ passthrough: true }) res: express.Response,
+  ) {
     const result = await this.authService.login(req.user, loginDto.farmId);
     setAuthCookie(res, result.access_token);
     return result;
@@ -39,13 +57,19 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @Patch('profile')
-  async updateProfile(@CurrentUser() user: CurrentUserPayload, @Body() dto: UpdateProfileDto) {
+  async updateProfile(
+    @CurrentUser() user: CurrentUserPayload,
+    @Body() dto: UpdateProfileDto,
+  ) {
     return this.authService.updateProfile(user.userId, dto);
   }
 
   @UseGuards(JwtAuthGuard)
   @Patch('settings')
-  async updateSettings(@CurrentUser() user: CurrentUserPayload, @Body() dto: UpdateSettingsDto) {
+  async updateSettings(
+    @CurrentUser() user: CurrentUserPayload,
+    @Body() dto: UpdateSettingsDto,
+  ) {
     return this.authService.updateSettings(user.userId, dto);
   }
 
@@ -106,7 +130,14 @@ export class AuthController {
     },
     @Res({ passthrough: true }) res: express.Response,
   ) {
-    const result = await this.authService.registerFromFirebase(body.email, body.name, body.avatar, body.googleId, body.firstName, body.lastName);
+    const result = await this.authService.registerFromFirebase(
+      body.email,
+      body.name,
+      body.avatar,
+      body.googleId,
+      body.firstName,
+      body.lastName,
+    );
     setAuthCookie(res, result.access_token);
     return result;
   }
@@ -119,7 +150,10 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @Put('avatar')
-  async updateAvatar(@CurrentUser() user: CurrentUserPayload, @Body() body: { avatar: string }) {
+  async updateAvatar(
+    @CurrentUser() user: CurrentUserPayload,
+    @Body() body: { avatar: string },
+  ) {
     return this.authService.updateAvatar(user.userId, body.avatar);
   }
 
