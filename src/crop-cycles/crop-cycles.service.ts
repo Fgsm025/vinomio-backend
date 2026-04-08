@@ -862,48 +862,6 @@ export class CropCyclesService {
       rainfallLastDate = last.startDate.toISOString();
     }
 
-    console.log('[getWaterFootprint] rainfall Prisma + agregado', {
-      cycleId: id,
-      fieldFarmId,
-      rainfallFarmIdFromJwt,
-      farmIdForRainfall,
-      cycleEndResolved: cycleEnd.toISOString(),
-      rainfallWindowStart: rainfallWindowStart.toISOString(),
-      rainfallWindowEnd: rainfallWindowEnd.toISOString(),
-      prismaRainfallWhere:
-        farmIdForRainfall != null
-          ? {
-              farmId: farmIdForRainfall,
-              startDate: {
-                gte: rainfallWindowStart.toISOString(),
-                lte: rainfallWindowEnd.toISOString(),
-              },
-            }
-          : {
-              OR: [
-                { cropCycleId: cropCycle.id },
-                { plotId },
-                ...(fieldId ? [{ fieldId }] : []),
-              ],
-              startDate: {
-                gte: rainfallWindowStart.toISOString(),
-                lte: rainfallWindowEnd.toISOString(),
-              },
-            },
-      eventsFound: rainfallEvents.length,
-      surfaceM2,
-      rainfallHa,
-      rainfallM3,
-      rainfallMmTotal,
-      rainfallUsedIntensityEstimate,
-      sampleEvents: rainfallEvents.slice(0, 12).map((e) => ({
-        id: e.id,
-        startDate: e.startDate.toISOString(),
-        intensity: e.intensity,
-        amountMm: e.amountMm,
-      })),
-    });
-
     const plotSurfaceHa = cropCycle.plot?.surface ?? 0;
 
     const totalM3 = irrigationM3 + rainfallM3;

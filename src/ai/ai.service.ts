@@ -1,9 +1,12 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { OpenAIEmbeddings } from '@langchain/openai';
 import { Groq } from 'groq-sdk';
+import { resolveCountryForFarmMatch } from './farm-country-normalize';
 import { PrismaService } from '../prisma/prisma.service';
 
 interface LotContext {
@@ -86,19 +89,43 @@ interface FarmContextParams {
 
 @Injectable()
 export class AiService {
+  private readonly logger = new Logger(AiService.name);
   private readonly groq = new Groq({
     apiKey: process.env.GROQ_API_KEY,
+  });
+  private readonly embeddings = new OpenAIEmbeddings({
+    openAIApiKey: process.env.OPENAI_API_KEY,
+    model: 'text-embedding-3-small',
+    dimensions: 1536,
   });
 
   constructor(private readonly prisma: PrismaService) {}
 
+  private async generateEmbedding(text: string): Promise<number[]> {
+    if (!process.env.OPENAI_API_KEY?.trim()) {
+      throw new Error(
+        'OPENAI_API_KEY is missing; cannot embed query for RAG.',
+      );
+    }
+    const vector = await this.embeddings.embedQuery(text);
+    if (vector.length !== 1536) {
+      throw new Error(
+        `Expected embedding dimension 1536, got ${vector.length}`,
+      );
+    }
+    return vector;
+  }
+
   /**
    * Cosine distance (`<=>`) against stored embeddings; lower is more similar.
    * @param embedding Must match model dimension (1536).
+   * @param farmCountry Value stored on `Farm.country` (English label or ISO) or null.
+   *   Matches chunks with the same canonical label, the same ISO code (legacy rows), or `GLOBAL`.
    */
   async searchSimilarDocuments(
     embedding: number[],
     limit = 5,
+    farmCountry: string | null | undefined = null,
   ): Promise<SimilarDocumentChunkRow[]> {
     const dim = 1536;
     if (embedding.length !== dim) {
@@ -116,17 +143,25 @@ export class AiService {
     }
 
     const vectorString = `[${embedding.join(',')}]`;
+    const { label, iso } = resolveCountryForFarmMatch(farmCountry);
 
     return this.prisma.$queryRawUnsafe<SimilarDocumentChunkRow[]>(
       `
       SELECT id, content, source, category,
              (embedding <=> $1::vector) AS distance
       FROM document_chunks
+      WHERE (
+        country = 'GLOBAL'
+        OR country = $3
+        OR country = $4
+      )
       ORDER BY distance ASC
       LIMIT $2
       `,
       vectorString,
       limit,
+      label,
+      iso,
     );
   }
 
@@ -237,11 +272,35 @@ export class AiService {
   async getChatResponse(userMessage: string, farmId: string): Promise<string> {
     const farm = await this.prisma.farm.findUnique({
       where: { id: farmId },
-      select: { id: true, name: true },
+      select: {
+        id: true,
+        name: true,
+        country: true,
+        province: true,
+        location: true,
+      },
     });
 
     if (!farm) {
       throw new NotFoundException('Farm not found');
+    }
+
+    let ragContext = '';
+    try {
+      const embedding = await this.generateEmbedding(userMessage);
+      const docs = await this.searchSimilarDocuments(embedding, 5, farm.country);
+      if (docs.length > 0) {
+        ragContext =
+          '\nNORMATIVAS Y GUÍAS TÉCNICAS RELEVANTES:\n' +
+          docs
+            .map(
+              (d) =>
+                `[Fuente: ${d.source ?? 'N/D'}] ${d.content}`,
+            )
+            .join('\n');
+      }
+    } catch (e) {
+      this.logger.error('Error en RAG', e instanceof Error ? e.stack : e);
     }
 
     const [
@@ -418,11 +477,13 @@ export class AiService {
 
     const systemPrompt = [
       'Eres el asistente inteligente oficial de Cropai, una plataforma avanzada de gestión agrícola.',
-      'Tenés acceso en tiempo real a los datos de producción, insumos, stock, finanzas, tareas y asistencia de la finca del usuario.',
-      'Podés responder preguntas sobre qué se está plantando, desde cuándo, en qué lote, el estado de los ciclos de producción, niveles de stock, insumos disponibles y movimientos financieros.',
+      'Tenés acceso en tiempo real a los datos de la finca y a normativas o guías técnicas cuando figuran en el contexto siguiente.',
+      'Podés responder sobre producción, lotes, ciclos, stock, insumos, finanzas, tareas y asistencia.',
       'Respondé siempre en el idioma en que el usuario te escriba. Sé preciso, conciso y útil.',
+      `Ubicación: ${farm.country ?? 'N/D'}, ${farm.province ?? farm.location ?? 'N/D'}.`,
+      ragContext,
       '',
-      'Datos actuales de la finca:',
+      'DATOS DE GESTIÓN DE LA FINCA:',
       prismaContext,
     ].join('\n');
 

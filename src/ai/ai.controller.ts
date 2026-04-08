@@ -46,6 +46,8 @@ export class AiController {
   async ingestPdf(
     @UploadedFile() file: { buffer: Buffer } | undefined,
     @Body('sourceName') sourceName: string | undefined,
+    @Body('country') country?: string,
+    @Body('category') category?: string,
   ) {
     if (!file?.buffer?.length) {
       throw new BadRequestException('Se requiere un archivo PDF en el campo "file"');
@@ -54,6 +56,9 @@ export class AiController {
       throw new BadRequestException('Se requiere "sourceName" (nombre o identificador del documento)');
     }
 
-    return this.ingestionService.processPdf(file.buffer, sourceName.trim());
+    return this.ingestionService.processPdf(file.buffer, sourceName.trim(), {
+      country: country?.trim() || undefined,
+      category: category?.trim() || undefined,
+    });
   }
 }
