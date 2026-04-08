@@ -4,17 +4,13 @@ const COOKIE_NAME = 'auth_token';
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
- * `SameSite=None` requires `Secure`. Browsers drop `Secure` cookies on http:// (e.g. localhost),
- * so we only use cross-site prod cookies when the configured frontend is HTTPS.
- * Non-production always uses `lax` + non-secure so local/dev login works.
+ * Cross-origin SPA (e.g. cropai.es) → API on another host (e.g. *.koyeb.app) needs
+ * `SameSite=None` + `Secure`. In production we always set that; do not gate on
+ * `FRONTEND_URL` (typos, www vs apex, or missing env broke login).
+ * Local/dev stays `lax` + non-secure so http:// localhost still works.
  */
 function authCookieSecurity(): { secure: boolean; sameSite: 'lax' | 'none' } {
   if (process.env.NODE_ENV !== 'production') {
-    return { secure: false, sameSite: 'lax' };
-  }
-  const frontend = process.env.FRONTEND_URL ?? '';
-  const frontendIsHttps = frontend.startsWith('https://');
-  if (!frontendIsHttps) {
     return { secure: false, sameSite: 'lax' };
   }
   return { secure: true, sameSite: 'none' };
