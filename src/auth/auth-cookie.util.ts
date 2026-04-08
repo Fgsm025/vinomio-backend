@@ -13,7 +13,7 @@ function authCookieSecurity(): { secure: boolean; sameSite: 'lax' | 'none' } {
   if (process.env.NODE_ENV !== 'production') {
     return { secure: false, sameSite: 'lax' };
   }
-  return { secure: true, sameSite: 'none' };
+  return { secure: true, sameSite: 'lax' };
 }
 
 export function setAuthCookie(res: Response, token: string): void {
