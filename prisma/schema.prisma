@@ -92,10 +92,13 @@ model User {
   endsAt                 DateTime? @map("ends_at")
   createdAt              DateTime  @default(now()) @map("created_at")
   updatedAt              DateTime  @updatedAt @map("updated_at")
+  /** Count of private training documents uploaded by this user (denormalized). */
+  documentCount          Int       @default(0) @map("document_count")
 
-  farms       UserFarm[]
-  invitations Invitation[]
-  settings    Settings?
+  farms          UserFarm[]
+  invitations    Invitation[]
+  settings       Settings?
+  documentChunks DocumentChunk[]
 
   @@map("users")
 }
@@ -1212,6 +1215,11 @@ model DocumentChunk {
   /// When this chunk was loaded into the vector store
   loadedAt    DateTime @default(now()) @map("loaded_at")
 
-  // Index will be created manually after migration because Prisma still has limited HNSW support
+  /// null = public / farm-global knowledge; set = private chunk owned by this user
+  ownerId     String?  @map("owner_id")
+  owner       User?    @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+
+  // HNSW on `embedding`: see migration `20260410120000_document_chunks_embedding_hnsw` (Prisma cannot model pgvector index).
+  @@index([ownerId])
   @@map("document_chunks")
 }

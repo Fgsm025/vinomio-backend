@@ -36,6 +36,7 @@ export class AiController {
     const response = await this.aiService.getChatResponse(
       dto.userMessage,
       user.farmId,
+      user.userId,
     );
 
     return { response };

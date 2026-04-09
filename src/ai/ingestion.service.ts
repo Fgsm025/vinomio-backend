@@ -4,6 +4,7 @@ import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
 import OpenAI from 'openai';
 import { Groq } from 'groq-sdk';
 import { PDFParse } from 'pdf-parse';
+import { Prisma } from '@prisma/client';
 import {
   normalizeCountryForChunkStorage,
   normalizeDocumentCategory,
@@ -14,6 +15,8 @@ export interface IngestPdfOptions {
   /** ISO code, English label as in Farm.country, or GLOBAL */
   country?: string;
   category?: string;
+  /** When set, chunks are private to this user; skips LLM metadata (uses MANUAL + country). */
+  ownerId?: string;
 }
 
 @Injectable()
@@ -88,10 +91,15 @@ Return JSON only with keys "country" and "category" (no markdown).
     return { country: 'AR', category: 'VADEMECUM' };
   }
 
+  /**
+   * @param prismaTx When provided, chunk INSERTs use this client (caller must wrap in `$transaction`).
+   *   When omitted, INSERTs run inside an internal transaction (all chunks or none).
+   */
   async processPdf(
     pdfBuffer: Buffer,
     sourceName: string,
     options?: IngestPdfOptions,
+    prismaTx?: Prisma.TransactionClient,
   ) {
     try {
       if (!process.env.OPENAI_API_KEY?.trim()) {
@@ -109,22 +117,32 @@ Return JSON only with keys "country" and "category" (no markdown).
         await parser.destroy();
       }
 
-      const needAiCountry = !options?.country?.trim();
-      const needAiCategory = !options?.category?.trim();
-      let ai: { country: string; category: string } | null = null;
-      if (needAiCountry || needAiCategory) {
-        try {
-          ai = await this.extractMetadataWithLLM(fullText);
-        } catch (e) {
-          this.logger.error('extractMetadataWithLLM failed', e);
-          ai = { country: 'AR', category: 'VADEMECUM' };
-        }
-      }
+      const ownerId = options?.ownerId?.trim() ? options.ownerId.trim() : null;
 
-      const countryRaw =
-        options?.country?.trim() || ai?.country?.trim() || 'AR';
-      const categoryRaw =
-        options?.category?.trim() || ai?.category?.trim() || 'VADEMECUM';
+      let countryRaw: string;
+      let categoryRaw: string;
+
+      if (ownerId) {
+        countryRaw = options?.country?.trim() || 'AR';
+        categoryRaw = 'MANUAL';
+      } else {
+        const needAiCountry = !options?.country?.trim();
+        const needAiCategory = !options?.category?.trim();
+        let ai: { country: string; category: string } | null = null;
+        if (needAiCountry || needAiCategory) {
+          try {
+            ai = await this.extractMetadataWithLLM(fullText);
+          } catch (e) {
+            this.logger.error('extractMetadataWithLLM failed', e);
+            ai = { country: 'AR', category: 'VADEMECUM' };
+          }
+        }
+
+        countryRaw =
+          options?.country?.trim() || ai?.country?.trim() || 'AR';
+        categoryRaw =
+          options?.category?.trim() || ai?.category?.trim() || 'VADEMECUM';
+      }
 
       const countryForDb = normalizeCountryForChunkStorage(countryRaw);
       const category = normalizeDocumentCategory(categoryRaw);
@@ -135,6 +153,16 @@ Return JSON only with keys "country" and "category" (no markdown).
       });
       const docs = await splitter.createDocuments([fullText]);
 
+      type ChunkRow = {
+        content: string;
+        vectorLiteral: string;
+        sourceName: string;
+        category: string;
+        countryForDb: string;
+        ownerId: string | null;
+      };
+      const chunkRows: ChunkRow[] = [];
+
       for (const doc of docs) {
         const vector = await this.embeddings.embedQuery(doc.pageContent);
         if (vector.length !== 1536) {
@@ -143,18 +171,39 @@ Return JSON only with keys "country" and "category" (no markdown).
           );
         }
         const vectorLiteral = `[${vector.join(',')}]`;
-
-        await this.prisma.$executeRawUnsafe(
-          `
-        INSERT INTO document_chunks (id, content, embedding, source, category, country)
-        VALUES ((gen_random_uuid())::text, $1, $2::vector, $3, $4, $5);
-        `,
-          doc.pageContent,
+        chunkRows.push({
+          content: doc.pageContent,
           vectorLiteral,
           sourceName,
           category,
           countryForDb,
-        );
+          ownerId,
+        });
+      }
+
+      const insertAll = async (client: Pick<Prisma.TransactionClient, '$executeRawUnsafe'>) => {
+        for (const row of chunkRows) {
+          await client.$executeRawUnsafe(
+            `
+        INSERT INTO document_chunks (id, content, embedding, source, category, country, owner_id)
+        VALUES ((gen_random_uuid())::text, $1, $2::vector, $3, $4, $5, $6);
+        `,
+            row.content,
+            row.vectorLiteral,
+            row.sourceName,
+            row.category,
+            row.countryForDb,
+            row.ownerId,
+          );
+        }
+      };
+
+      if (prismaTx) {
+        await insertAll(prismaTx);
+      } else {
+        await this.prisma.$transaction(async (innerTx) => {
+          await insertAll(innerTx);
+        });
       }
 
       return {
@@ -162,6 +211,7 @@ Return JSON only with keys "country" and "category" (no markdown).
         chunks: docs.length,
         country: countryForDb,
         category,
+        ownerId: ownerId ?? undefined,
       };
     } catch (error) {
       this.logger.error('[IngestionService.processPdf]', error);

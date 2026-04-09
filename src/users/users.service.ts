@@ -18,6 +18,7 @@ const profileSelect = {
   planStatus: true,
   lsSubscriptionId: true,
   endsAt: true,
+  documentCount: true,
   createdAt: true,
   updatedAt: true,
 } satisfies Prisma.UserSelect;

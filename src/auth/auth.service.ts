@@ -28,6 +28,7 @@ export class AuthService {
     planStatus?: string;
     lsSubscriptionId?: string | null;
     endsAt?: Date | null;
+    documentCount?: number;
   }) {
     const bd = user.birthDate;
     const rawEndsAt = user.endsAt ? new Date(user.endsAt) : null;
@@ -70,6 +71,7 @@ export class AuthService {
       isPro,
       trialDaysLeft,
       subscriptionSource,
+      documentCount: user.documentCount ?? 0,
     };
   }
 

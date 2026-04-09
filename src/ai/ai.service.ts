@@ -120,12 +120,14 @@ export class AiService {
    * Cosine distance (`<=>`) against stored embeddings; lower is more similar.
    * @param embedding Must match model dimension (1536).
    * @param farmCountry Value stored on `Farm.country` (English label or ISO) or null.
-   *   Matches chunks with the same canonical label, the same ISO code (legacy rows), or `GLOBAL`.
+   *   Public chunks (`owner_id` null): same canonical label, legacy ISO, or `GLOBAL`.
+   *   Private training chunks (`owner_id` = user): included for that user on any farm (country ignored).
    */
   async searchSimilarDocuments(
     embedding: number[],
     limit = 5,
     farmCountry: string | null | undefined = null,
+    userId: string,
   ): Promise<SimilarDocumentChunkRow[]> {
     const dim = 1536;
     if (embedding.length !== dim) {
@@ -151,9 +153,15 @@ export class AiService {
              (embedding <=> $1::vector) AS distance
       FROM document_chunks
       WHERE (
-        country = 'GLOBAL'
-        OR country = $3
-        OR country = $4
+        owner_id = $5
+        OR (
+          owner_id IS NULL
+          AND (
+            country = 'GLOBAL'
+            OR country = $3
+            OR country = $4
+          )
+        )
       )
       ORDER BY distance ASC
       LIMIT $2
@@ -162,6 +170,7 @@ export class AiService {
       limit,
       label,
       iso,
+      userId,
     );
   }
 
@@ -269,7 +278,11 @@ export class AiService {
     return sections.join('\n');
   }
 
-  async getChatResponse(userMessage: string, farmId: string): Promise<string> {
+  async getChatResponse(
+    userMessage: string,
+    farmId: string,
+    userId: string,
+  ): Promise<string> {
     const farm = await this.prisma.farm.findUnique({
       where: { id: farmId },
       select: {
@@ -288,7 +301,12 @@ export class AiService {
     let ragContext = '';
     try {
       const embedding = await this.generateEmbedding(userMessage);
-      const docs = await this.searchSimilarDocuments(embedding, 5, farm.country);
+      const docs = await this.searchSimilarDocuments(
+        embedding,
+        5,
+        farm.country,
+        userId,
+      );
       if (docs.length > 0) {
         ragContext =
           '\nNORMATIVAS Y GUÍAS TÉCNICAS RELEVANTES:\n' +
